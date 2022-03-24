@@ -1,0 +1,84 @@
+\boolfalse {citerequest}\boolfalse {citetracker}\boolfalse {pagetracker}\boolfalse {backtracker}\relax 
+\babel@toc {english}{}
+\babel@toc {english}{}
+\babel@toc {english}{}
+\babel@toc {english}{}
+\babel@toc {english}{}
+\babel@toc {english}{}
+\babel@toc {english}{}
+\babel@toc {portuguese}{}
+\babel@toc {english}{}
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{List of Figures}{vi}{section*.4}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{List of Tables}{vii}{section*.5}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{Glossary}{viii}{section*.6}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{Acronyms}{ix}{section*.8}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{Symbols}{x}{section*.10}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{Chemical Symbols}{xi}{section*.12}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{\chapternumberline {1}Introduction}{1}{chapter.1}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{\chapternumberline {2}Research Context}{2}{chapter.2}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.1}CAP theorem}{2}{section.2.1}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.2}Consistency}{2}{section.2.2}%
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.2.1}Strong consistency}{3}{subsection.2.2.1}%
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.2.2}Weak consistency}{3}{subsection.2.2.2}%
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.2.3}CRDTs and other conflict resolution techniques}{4}{subsection.2.2.3}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.3}Antidote}{5}{section.2.3}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.4}Replication}{5}{section.2.4}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.5}Views}{5}{section.2.5}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.6}Thoughts}{6}{section.2.6}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{\chapternumberline {3}A Short \LaTeX \ Tutorial with Examples}{8}{chapter.3}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.1}Document Structure}{8}{section.3.1}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.2}Dealing with Bibliography}{8}{section.3.2}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.3}Inserting Tables}{8}{section.3.3}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.4}Importing Images}{8}{section.3.4}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.5}Floats, Figures and Captions}{8}{section.3.5}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.6}Text Formatting}{10}{section.3.6}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.7}Generating PDFs from \LaTeX }{10}{section.3.7}%
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.7.1}Generating PDFs with pdflatex}{10}{subsection.3.7.1}%
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.7.2}Dealing with Images}{11}{subsection.3.7.2}%
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.7.3}Creating Source Files Compatible with both latex and pdflatex}{11}{subsection.3.7.3}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.8}Equações}{13}{section.3.8}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.9}Test for listings}{13}{section.3.9}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.10}Test for algorithms}{13}{section.3.10}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{Appendices}{}{}
+\defcounter {refsection}{0}\relax 
+\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{18}{appendix.A}%
+\defcounter {refsection}{0}\relax 
+\contentsline {appendix}{\chapternumberline {B}Appendix 2 Lorem Ipsum}{19}{appendix.B}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{Annexes}{}{}
+\defcounter {refsection}{0}\relax 
+\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{21}{annex.A}%
+\babel@toc {english}{}
+\babel@toc {english}{}

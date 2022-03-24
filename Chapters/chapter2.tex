@@ -1,0 +1,183 @@
+%!TEX root = ../template.tex
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% chapter2.tex
+%% NOVA thesis document file
+%%
+%% Chapter with the template manual
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\typeout{NT FILE chapter2.tex}%
+
+\chapter{Research Context}
+
+TODO: A proper introduction to this
+
+I think the CAP theorem can be included under consistency subsection, with a proper introduction/context. Likely will need to be shortened though.
+
+\section{CAP theorem}
+
+In an ideal world, distributed systems would all provide strongly consistent data, be always available and keep operating even in the presence of failures and network partitions.
+However, the CAP theorem \cite{cap} states that it is only possible to, at most, provide two out of the three following properties:
+\begin{enumerate*}[label=(\roman*)]
+	\item Strong \textbf{C}onsistency - all replicas of a system must provide the same view of the data at any given time;
+	\item \textbf{A}vailability - the system is capable of providing a reply to every client's request at any point in time;
+	\item \textbf{P}artition-tolerance - the system keeps operating and evolving state correctly even in the presence of message loss and network partitions.
+\end{enumerate*}
+
+Typically, since network partitions are common on systems distributed across multiple places, the choice tends to be between providing Strong Consistency or Availability.
+It is noteworthy that one does not need to select ``all or nothing''. 
+Systems providing \textbf{C}onsistency and \textbf{P}artition-tolerance (CP), can still be available in the presence of some faults, but will eventually stop to evolve state if too many nodes fail or too many messages are lost.
+On the other hand, systems providing \textbf{A}vailability and \textbf{P}artition-tolerance can still provide some consistency guarantees, known as Weak Consistency. However, the replicas will diverge at times and odd results may be observed due to the concurrent execution of operations.
+
+\section{Consistency}
+
+In the literature, a plentora of consistency models have been specified, each one providing different guarantees to the developers in terms of the states that can be observed, as well as different requirements to deploy such models.
+Despite the variety of models, they can be grouped as either being a form of \emph{Strong Consistency} or \emph{Weak Consistency}.
+
+\subsection{Strong consistency}
+
+In models providing strong consistency, all clients observe the same state of the system independently of the replica contacted by the client(s).
+In order to achieve this, it is necessary to totally order all write operations executed in the system, which requires coordination among the different replicas \cite{linearizability}.
+Depending on the configuration of the system, even to execute a single read operation, many replicas may need to be contacted.
+This is necessary as at any point it must be ensured that the client can read the latest state.
+
+The strong requirements of coordination imply that strongly consistent systems, in order to tolerate network partitions, may have to come to an halt (unavailable) when enough replicas can not be contacted to execute an operation, in order to prevent state divergance or incorrect values being returned.
+Strongly consistent systems tend to be easier to develop applications on than weaker consistency, as they are easier to reason about.
+However, the costs of synchronization can be prohibitively high for large scale systems, specially if replicated across the globe, as latency for operations quickly racks up.
+Due to the requirement of a total order, it also tends to be difficult to scale to many clients and maintain high throughput.
+
+Multiple models implementing strong consistency have been proposed in the literature  \cite{linearizability, si}: serializability, linearizability and snapshot isolation to name a few.
+
+\subsection{Weak consistency}
+
+Models providing weak consistency are considerably more relaxed in terms of requirements compared to strong consistency \cite{understandingEC}.
+As such, they also provide weaker guarantees, making them harder to reason about and build applications on.
+For instance, concurrent updates on the same objects may lead to undesired results or values.
+The states of the replicas may diverge, with read anomalies and ``illogical'' (in the context of an application) states being observed.
+For example, in a group communication system, under some consistency models, user A may see user B replying to user C's message before he even sees user C's message.
+This can be very confusing to the users.
+However, the weaker requirements of weakly consistent systems gives potential to many advantages compared to strong consistency: better fault tolerance (operations can keep executing even under network partitions), lower latency and higher scalability in terms of throughput and number of clients.
+
+One of the most basic consistency models is eventual consistency \cite{understandingEC}.
+In short, eventual consistency provides only one guarantee: when updates stop occurring, eventually the state of the replicas will converge.
+However, several issues are left in the open. For example: what happens when the same object is concurrently updated? Which states can be observed on reads? How do the states evolve as updates are being applied?
+
+Many other weak consistency models have been studied in the literature, e.g. causal consistency, causal+, monotonic reads, etc.
+Causal consistency is of particular interest as it provides useful guarantees.
+In a general form, causal consistency ensures that operations casually related, i.e. in which one happens before the other, are seen according to said order by every client.
+This means that, e.g., a read that happens after a write must reflect the effects of said write.
+With causal consistency, the aforementioned example of group communication system would no longer be possible - user C would always see user B's reply after seeing user A's message, as they are causally related.
+
+\todo{Check if there's any system which only applies on-object causality. Check the "eventual consistency" paper}
+
+Causality can be provided either in the context of a single object (i.e., causality between different objects is not ensured) or between multiple objects.
+The former is tougher/costly to maintain, as an order needs to be maintained between all objects, but more useful.
+For example, in a online shopping system which allows users to keep track of when a product is restocked, it is desirable for the notifications sent to the users to be causally related with the restocking action (as we do not want users to receive the notification before they can see the product in stock).
+For this use case, causality between objects is desirable.
+
+Monotonic reads gives one simple to understand guarantee: consecutive reads on the same object, must always return the same value or a more recent value.
+This means that after a value is read, it is not possible to read again an older value.
+It is however possible to read stale data, or keep reading the same value despite more recent values existing.
+In distributed systems, it is important to define if this guarantee is given at a single server level or across servers, as the latter may imply having to wait for data to arrive and be processed if the client issues reads in different servers.
+
+\todo{Have to mention causal+}
+
+\todo{This text will most likely need to be changed depending on how the introduction is written.}
+In PotionDB we provide causal consistency between objects.
+The views provided in our system are directly co-related to the data of other objects, thus it is desirable that when a client observes a change in said objects, they can also observe the change in the views.
+We provide causality even if the client contacts a different server.
+Note that providing causal consistency is specially challenging in PotionDB's scenario, as data is partially replicated and thus there can be causal relationships between views and objects without all said objects being present in the same server as the view.
+
+To accommodate use cases in which higher throughput is desirable and causality is not needed for the read, we also provide monotonic reads as long as the client is sticky to one server.
+
+\subsection{CRDTs and other conflict resolution techniques}
+
+%CRDTs/operational transformation
+Both with eventual and causal consistency, concurrent updates on the same objects can occur and lead to conflicts.
+For instance, if an element is concurrently added and removed from a set, it is not clear what should be the final state.
+Concurrency conflicts need to be dealt with, in order for all replicas' state to converge.
+Solutions for handling conflicts can range from totally ordering operations following some criteria (e.g., using logical clocks and replica IDs), letting the user/application deal with the conflicting state (e.g., in a register with concurrent writes, use application logic to decide which value to stay) or forcing all operations to be commutative (if operations commute then the result will be the same, independently of the order by which they are applied).
+
+In PotionDB we make usage of CRDTs to represent our datatypes.
+CRDTs, or \textbf{C}onflict-Free  \textbf{R}eplicated \textbf{D}ata \textbf{Types}, are data types designed to be used in large-scaled distributed systems offering weak consistency.
+Concurrency conflicts are solved by the CRDT itself, by designing operations to be commutative.
+Updates and reads can execute locally without synchronization, with all replicas of a CRDT eventually converging.
+This allows for high availability and low latency on accessing CRDTs, as it is even possible to cache CRDTs on the client-side.
+\todo{Maybe quote some example? Like TVale's?}
+Different policies can be used to handle conflicts, which also allows CRDTs to more easily adapt to different applications.
+\todo{Cite my paper/thesis here probably, along maybe some other references}.
+
+Alternative solutions based on commutativity have been studied in the literature. 
+One such solution is OT, \textbf{O}perational \textbf{T}ransformation.
+The intuition behind OT is that conflicting operations can, when arriving on a replica, be ``transformed'' to be commutative and thus not conflict.
+However, it is usually considered harder and more error-prone to design said transformations instead of, as in CRDTs, designing operations to be commutative from the start.
+We believe CRDTs' ease of use and flexibility with solving conflicts justify its usage over OT-based solutions in PotionDB.
+
+\section{Antidote}
+
+Does this actually need a section of its own? Or should I refer it alongside other solutions and give more detail to this one?
+
+\section{Replication}
+
+Must talk here about replication, partial replication, non-uniform replication and geo replication. May also have to talk here about op vs state based CRDTs and potentially.
+
+\section{Views}
+
+Here talk about views in common databases. What is their use, their advantages and disadvantages. Also talk about common queries/operations in relational databases which we will have to mimic. On the Research Statement, I should mention how we are mimicking/plan to mimic them.
+Mention and discuss existing solutions.
+
+%Maybe say that in PotionDB we decided to use CRDTs and explain the advantages. Mention the other possible solution (operational transformation) and why that one was not choosen.
+
+
+
+%Focus on causal consistency
+%Discuss about causality in same object and different object
+%Make some conclusions on PotionDB about consistency.
+
+
+%Present weak consistency in general
+%Explain eventual consistency
+%Mention strong and weak points of weak consistency
+%Present other models, namely casual consistency. Explain in-object and cross-object casual consistency
+%Refer our choice in PotionDB, possibly in another section.
+
+\section{Thoughts}
+
+So here it is basically a very extended state of the art (similar to how I did in my master's? A bit smaller though)
+Which topics do I want to touch about here?
+\begin{itemize}
+	\item CAP
+	\item Consistency levels (probably a lot to cover here - from weak to strong, multiple types of weak, causality between objects/same object, etc.)
+	\item CRDTs
+	\item Antidote.
+	\item Partial replication
+	\item Non-Uniform replication
+	\item Geo replication
+	\item State partition???
+	\item Views/indexes. Namely materialized views.
+	\item Maybe typical database queries/operations (limit, sort by, etc.)? Has some relevance as we aim to provide views with CRDTs.
+	\item Other similar solutions (ChronoCache, etc. Check the paper). Must definitely mention things like Noria and predictive treaties.
+\end{itemize}
+
+What about subsections?
+\begin{itemize}
+	\item Replication
+	\item Consistency (can probably include CAP and state partition?)
+	\item Other solutions?
+\end{itemize}
+
+For consistency, I can check Albert's PHD plan for references. Same for conflict resolution techniques in CRDTs.
+Check our paper and my master's thesis for more topics/references too.
+
+Note: On research statement, I can talk about TPC-H, and even give an example on how to transform a TPC-H query into CRDTs.
+%\chapter{NOVAthesis Template \emph{User's Manual}}
+%\label{cha:users_manual}
+
+This phrase from the grant documents can be useful:
+''In this work we propose to design a novel replication model levering on the advantages of both partial and non-uniform replication. We will also conduct research on integrating multiple consistency models in our proposal, which is challenging due to transactions spanning multiple partitions and materialized views referring to multiple partitions. We will also implement our model in a database prototype.´´
+
+To talk about how difficult/novel the problem is, mention that: - we combine parcial + uniform replication (novel) in a geo-distributed scenario + has to handle consistency for transactions spanning multiple partitions, ensuring both partially replicated objects and materialized views stay updated and correct.
+
+Check the FCT grant docs for objectives/contributions too (dynamic partition (add/remove replicas on the fly), stronger consistency models are particularly interesting to mention.)
+
+May be worth mentioning my Master's work (and the published paper) - if needed, I have the knowledge and experience to design new CRDTs, and also understanding of consistency levels.
