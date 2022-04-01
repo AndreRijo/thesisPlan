@@ -11,7 +11,20 @@
 \chapter{Introduction}
 \label{cha:introduction}
 
-``The Introduction should include a short summary of the major issues be- hind the proposed research, and provide the context of those issues within a broader background (not only in academic, but also in industrial and social terms, if possible). It may already provide a glimpse of the problems and challenges you intend to solve and the kind of results you expect to obtain, in general terms. After reading the Introduction, anyone should get an intuitive grasp of what the research issues are and why they are relevant.''
+\textbf{DISCLAIMER - THE PARAGRAPH BELOW IS ``RANDOM TEXT'' - I came up with it while writing the section of geo replication. I leave it here as it may be useful for either the Introduction or Research Statement chapters.}
+
+In PotionDB, the main goal is to be able to provide mechanisms allowing quick reply of demanding but recurring queries that concern large amounts of data.
+For example, in a worldwide e-commerce system, obtaining the ``top 10 sold products worldwide'' is a challenging query, as this requires knowing the amount of sales of all products.
+For such a system, it is ideal for it to be geo-distributed (to ensure low latency to all clients) and partially replicated (it is undesirable for e.g. data of all clients, sales and local stocks to be replicated everywhere).
+Under this scenario, replying to the aforementioned query is very difficult, as no server has all the required data.
+Strong consistency is also not desirable, as this query would involve all data-centers, which could make a transaction for this query take a long time and possibly abort multiple times.
+Thus, in PotionDB, we propose to provide materialized views under a partially geo-replicated database, providing causal consistency.
+More precisely, we aim to provide materialized views with a global view of the data, without requiring all data necessary for the view to be replicated in one place.
+Queries targeted at those views must also be able to complete by executing locally in any of the servers replicating said view.
+
+\textbf{Notes from here below}
+	
+	`The Introduction should include a short summary of the major issues be- hind the proposed research, and provide the context of those issues within a broader background (not only in academic, but also in industrial and social terms, if possible). It may already provide a glimpse of the problems and challenges you intend to solve and the kind of results you expect to obtain, in general terms. After reading the Introduction, anyone should get an intuitive grasp of what the research issues are and why they are relevant.''
 
 - Motivate the research topic
 

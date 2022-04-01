@@ -253,7 +253,7 @@ A related concept is wide-replication.
 Wide-replication shares similar concepts with geo-replication, namely the existence of multiple data-centers in different places. 
 However the distance is usually somewhat limited (e.g., all data-centers located in the United States).
 Some systems in the literature have been designed with wide-replication in mind.
-In this scenario however, having to coordinate with more than one datacenter may be acceptable, as the latency is still low enough (below 100ms  \footnote{For instance: Amazon's AWS servers in the United States have below 70ms latency among themselves, while the European's servers have below 50ms.}).
+In this scenario however, having to coordinate with more than one data-center may be acceptable, as the latency is still low enough (below 100ms  \footnote{For instance: Amazon's AWS servers in the United States have below 70ms latency among themselves, while the European's servers have below 50ms.}).
 In geo-replication, this may become prohibitively expensive, as latencies between faraway data-centers are in the hundreds of milliseconds, which can easily degrade the user experience.
 
 \todo{Does that part of "below 100ms" need any citation? And the amazon examples in the footnotes, does that need citation? I took from here: https://www.cloudping.co/grid}
@@ -270,12 +270,12 @@ However, some systems offer only eventual consistency, which is difficult for ap
 Thus, research has been done in trying to bring causal consistency to wide-distributed and geo-distributed systems \cite{???}, with causality across objects, specially under partial replication, being challenging.
 The weak consistency systems can provide very low latency due to usually not needing to coordinate with other servers, but even with causality, it can be difficult to program applications on top of such systems. %Should cite here the one system that tries to provide a relational view on geo distributed.
 
-\todo{Some commentary about PotionDB of partial + geo replication.}
+\todo{Not sure if the text below is necessary/should be in some other form. Likely need to revisit this after other chapters are written/developed}
 
-Another consideration when applying geo-replication is related with full replication.
-By default, all data is replicated in every datacenter, possibly with sharding inside each datacenter.
-However, as the number of datacenters increases, the replication process becomes more costly both in terms of storage, networking and processing power.
-Partial replication can be used to minimize the referred issues, specially when data access presents some kind of locality.
+PotionDB is a key-value store which is geo-replicated and allows to provide both partial replication and full replication.
+System administrators can decide, for each group of objects, if they should be fully replicated or partially replicated, and, in case of the latter, in which servers each group should be replicated in.
+The main challenge of PotionDB consists in providing consistent views that concern global data, under a form of weak consistency (causal consistency) and without all the required data being in a single server.
+Provisioning of said views should only require interacting with a single server also, to ensure low latency.
 
 \subsection{Non-uniform replication}
 
