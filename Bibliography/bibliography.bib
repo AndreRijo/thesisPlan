@@ -1,5 +1,38 @@
 % Encoding: UTF-8
 
+@phdthesis{crdt,
+	title={A comprehensive study of convergent and commutative replicated data types},
+	author={Shapiro, Marc and Pregui{\c{c}}a, Nuno and Baquero, Carlos and Zawirski, Marek},
+	year={2011},
+	school={Inria--Centre Paris-Rocquencourt; INRIA}
+}
+
+%Lattices and LUB
+@article{stateCRDT,
+	title={Composition in state-based replicated data types},
+	author={Baquero, Carlos and Almeida, Paulo S{\'e}rgio and Cunha, Alcino and Ferreira, Carla},
+	journal={Bulletin of the European Association for Theoretical Computer Science},
+	number={123},
+	year={2017}
+}
+
+@inproceedings{deltaAlmeida,
+	title={Efficient state-based crdts by delta-mutation},
+	author={Almeida, Paulo S{\'e}rgio and Shoker, Ali and Baquero, Carlos},
+	booktitle={International Conference on Networked Systems},
+	pages={62--76},
+	year={2015},
+	organization={Springer}
+}
+
+@inproceedings{deltaVan,
+	title={$\delta$-crdts: Making $\delta$-crdts delta-based},
+	author={van der Linde, Albert and Leit{\~a}o, Jo{\~a}o and Pregui{\c{c}}a, Nuno},
+	booktitle={Proceedings of the 2nd Workshop on the Principles and Practice of Consistency for Distributed Data},
+	pages={1--4},
+	year={2016}
+}
+
 @article{cap,
 	title={Brewer's conjecture and the feasibility of consistent, available, partition-tolerant web services},
 	author={Gilbert, Seth and Lynch, Nancy},
@@ -35,9 +68,160 @@
 	author = {Burckhardt, Sebastian and Gotsman, Alexey and Yang, Hongseok},
 	title = {Understanding Eventual Consistency},
 	year = {2013},
-	month = {March},
 	url = {https://www.microsoft.com/en-us/research/publication/understanding-eventual-consistency/},
 	number = {MSR-TR-2013-39},
+}
+
+%Session guarantees
+@inproceedings{session,
+	title={Transactional storage for geo-replicated systems},
+	author={Sovran, Yair and Power, Russell and Aguilera, Marcos K and Li, Jinyang},
+	booktitle={Proceedings of the Twenty-Third ACM Symposium on Operating Systems Principles},
+	pages={385--400},
+	year={2011}
+}
+
+%Causal+
+@inproceedings{cops,
+	title={Don't settle for eventual: Scalable causal consistency for wide-area storage with COPS},
+	author={Lloyd, Wyatt and Freedman, Michael J and Kaminsky, Michael and Andersen, David G},
+	booktitle={Proceedings of the Twenty-Third ACM Symposium on Operating Systems Principles},
+	pages={401--416},
+	year={2011}
+}
+
+%eventual
+@article{dynamo,
+	title={Dynamo: Amazon's highly available key-value store},
+	author={DeCandia, Giuseppe and Hastorun, Deniz and Jampani, Madan and Kakulapati, Gunavardhan and Lakshman, Avinash and Pilchin, Alex and Sivasubramanian, Swaminathan and Vosshall, Peter and Vogels, Werner},
+	journal={ACM SIGOPS operating systems review},
+	volume={41},
+	number={6},
+	pages={205--220},
+	year={2007},
+	publisher={ACM New York, NY, USA}
+}
+
+@article{cassandra,
+	title={Cassandra: a decentralized structured storage system},
+	author={Lakshman, Avinash and Malik, Prashant},
+	journal={ACM SIGOPS Operating Systems Review},
+	volume={44},
+	number={2},
+	pages={35--40},
+	year={2010},
+	publisher={ACM New York, NY, USA}
+}
+
+%Geo-distributed strong consistency
+@article{spanner,
+	title={Spanner: Google’s globally distributed database},
+	author={Corbett, James C and Dean, Jeffrey and Epstein, Michael and Fikes, Andrew and Frost, Christopher and Furman, Jeffrey John and Ghemawat, Sanjay and Gubarev, Andrey and Heiser, Christopher and Hochschild, Peter and others},
+	journal={ACM Transactions on Computer Systems (TOCS)},
+	volume={31},
+	number={3},
+	pages={1--22},
+	year={2013},
+	publisher={ACM New York, NY, USA}
+}
+
+%Causal consistency, avoids write-write conflicts with PSI
+@inproceedings{walter,
+	title={Transactional storage for geo-replicated systems},
+	author={Sovran, Yair and Power, Russell and Aguilera, Marcos K and Li, Jinyang},
+	booktitle={Proceedings of the Twenty-Third ACM Symposium on Operating Systems Principles},
+	pages={385--400},
+	year={2011}
+}
+
+@incollection{lamport2019time,
+	title={Time, clocks, and the ordering of events in a distributed system},
+	author={Lamport, Leslie},
+	booktitle={Concurrency: the Works of Leslie Lamport},
+	pages={179--196},
+	year={2019}
+}
+
+@inproceedings{legion,
+	title={Legion: Enriching internet services with peer-to-peer interactions},
+	author={van der Linde, Albert and Fouto, Pedro and Leit{\~a}o, Jo{\~a}o and Pregui{\c{c}}a, Nuno and Casti{\~n}eira, Santiago and Bieniusa, Annette},
+	booktitle={Proceedings of the 26th International Conference on World Wide Web},
+	pages={283--292},
+	year={2017}
+}
+
+@inproceedings{castineira2015collaborative,
+	title={Collaborative offline web applications using conflict-free replicated data types},
+	author={Casti{\~n}eira, Santiago J and Bieniusa, Annette},
+	booktitle={Proceedings of the First Workshop on Principles and Practice of Consistency for Distributed Data},
+	pages={1--4},
+	year={2015}
+}
+
+@inproceedings{swiftcloud,
+	title={Write fast, read in the past: Causal consistency for client-side applications},
+	author={Zawirski, Marek and Pregui{\c{c}}a, Nuno and Duarte, S{\'e}rgio and Bieniusa, Annette and Balegas, Valter and Shapiro, Marc},
+	booktitle={Proceedings of the 16th Annual Middleware Conference},
+	pages={75--87},
+	year={2015}
+}
+
+@inproceedings{crdtMultipolicy,
+	author = {Rijo, André and Ferreira, Carla and Preguiça, Nuno},
+	title = {Set CRDT com Múltiplas Políticas de Resolução de Conflitos},
+	booktitle = {INForum 2018 - Actas do 10º Simpósio de Informática},
+	publisher = {Universidade de Coimbra},
+	year = {2018}
+}
+
+%Geo-replication
+@article{slog,
+	title={Slog: Serializable, low-latency, geo-replicated transactions},
+	author={Ren, Kun and Li, Dennis and Abadi, Daniel J},
+	journal={Proceedings of the VLDB Endowment},
+	volume={12},
+	number={11},
+	pages={1747--1761},
+	year={2019},
+	publisher={VLDB Endowment}
+}
+
+%OT
+@inproceedings{ot,
+	title={Operational transformation in real-time group editors: issues, algorithms, and achievements},
+	author={Sun, Chengzheng and Ellis, Clarence},
+	booktitle={Proceedings of the 1998 ACM conference on Computer supported cooperative work},
+	pages={59--68},
+	year={1998}
+}
+
+%OT Correctness
+@phdthesis{otCorrectness,
+	title={Proving correctness of transformation functions in collaborative editing systems},
+	author={Oster, G{\'e}rald and Urso, Pascal and Molli, Pascal and Imine, Abdessamad},
+	year={2005},
+	school={INRIA}
+}
+
+%Paxos
+@article{paxos,
+	title={Paxos made simple},
+	author={Lamport, Leslie},
+	journal={ACM SIGACT News (Distributed Computing Column) 32, 4 (Whole Number 121, December 2001)},
+	pages={51--58},
+	year={2001}
+}
+
+%Total Order Broadcast
+@article{tob,
+	title={Comparison of database replication techniques based on total order broadcast},
+	author={Wiesmann, Matthias and Schiper, Andr{\'e}},
+	journal={IEEE Transactions on Knowledge and Data Engineering},
+	volume={17},
+	number={4},
+	pages={551--566},
+	year={2005},
+	publisher={IEEE}
 }
 
 
