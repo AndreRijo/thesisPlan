@@ -209,71 +209,84 @@ This solution has been studied in the literature \cite{deltaAlmeida, deltaVan}, 
 
 \subsection{Partial replication}
 
-Full replication is very popular. It allows for potentially high fault tolerance, as data is available everywhere so many servers can be  unavailable and, depending on the consistency model, the data still be accessible or, at least, safe.
-Full replication also simplifies data access, as whenever an update or read is issued, the data being accessed is all present in one place.
+Full replication is very popular in distributed storage systems \cite{sipre}. 
+It allows for potentially high fault tolerance, as data is stored everywhere so many servers can be unavailable and, depending on the consistency model, still have the data reachable or, at least, safely stored.
+Full replication also simplifies data access, as whenever updates or reads are issued, all data being accessed is present in one place.
 However, it also comes with downsides: as the number of servers increases, more storage is needed, as all servers store all data.
-Network and processing power costs also increase, as all servers either process updates to all objects or changes to their states.
+Network and processing power costs also increase, as all servers either process updates to all objects or changes to their states \cite{sipre}.
 
-Partial replication is thus of interest for large-scale services.
-With partial replication, each node of a system is not required to replicate all existing objects.
-In fact, it is possible to fine-tune which object(s) or groups of objects each server replicates.
-Partial replication has potentially multiple benefits - reduced storage costs (less data per server), reduced network usage (no longer needs to send updates of every object to everywhere) and reduced usage of processing power (replicas only process a subset of the updates/objects).
-In practice, partial replication has to be carefully tuned.
-It is essential that all objects accessed by a given user are present in the datacenter the user is interacting with (and said datacenter should be close to the user).
-Otherwise, multiple datacenters may have to be contacted to satisfy a transaction, which is not only a difficult problem (ensuring consistency in this scenario is not trivial), but also can lead to the user experiencing high latency, which is problematic \cite{???}.
-It can also hinder the throughput of the system by requiring coordination and data transfer among faraway datacenters to satisfy the transaction.
-%Namely, the partition of the data must be done in such a way so that for most (preferably all) transactions, the data required to satisfy the transaction is present in a single datacenter.
+As the number of servers and/or data-centers increases, replication costs may become prohibitively high.
+In the literature two different mechanisms have been proposed to alleviate the replication costs:
 
-\todo{Maybe the paragraph above has too much text/detail?}
+\paragraph{Internal partitioning.}
+The idea behind internal partitioning is to split the dataset inside each server/data-center, allowing the system to scale with respectively, multi-core CPUs or multiple machines.
+Internal partitioning in the context of a data-center helps reduce the higher replication costs associated with increasing the number of servers, however it also introduces some overhead in accessing data across partitions \cite{dynamo, cops, mdcc}.
+Synchronization between machines may be needed to execute transactions, but this may be acceptable as latency inside a data-center is low \cite{cops}.
+While this process already helps in reducing the increasing replication costs, all data-centers still replicate all data (full replication), which may still waste storage and network resources.
+Internal partitioning is often referred to as ``sharding''.
+We also include under internal partitioning systems \cite{dynamo} in which each node is responsible for a subset of the data and replicates some other subsets for fault tolerance.
+Under this replication scenario, however, it is difficult to provide good consistency guarantees or features such as transactions.
 
-Partial replication is mostly appropriate for systems distributed worldwide in which there is locality on data access.
-For example, in an e-commerce system, the data of each user does not need to be replicated everywhere - said data will be mostly relevant in the region where the user lives.
-Thus, replicating in the closest datacenter to the user, plus a few others for fault tolerance, is ideal.
-Besides fine tuning of data distribution based on application context, some systems also provide automatic partitioning of data and automatically move data across datacenters when the access pattern changes.
+\paragraph{External partitioning}.
+With external partitioning, each data-center may replicate a different subset of data.
+This allows to further reduce storage, network and processing costs as, respectively, less data is stored, less updates need to be sent and processed in each data-center \cite{spanner, sipre}.
+The replication mechanism associated with external partitioning is called partial replication.
+
+Partial replication is thus of interest for large-scale services, in order to keep replication costs bearable as the number of data-centers increases.
+It is even more useful for systems distributed all around the world (geo-distributed) in which there is locality on the data \cite{sipre, slog}.
+E.g., in an international e-commerce application, data regarding customers, sales and stocks in Europe is likely not relevant in Asia.
+With partial replication, the referred data could be replicated only in European data-centers and possibly one other region for fault tolerance.
+Besides the aforementioned benefits of partial replication, another advantage also comes from this: if synchronization is required (e.g., to ensure strong consistency), transactions regarding European data only need to coordinate with European data-centers, instead of data-centers spread across the world \cite{spanner, sipre, slog}.
+This can allow for lower latency and higher throughput.
+
+On the other hand, external partitioning needs to be carefully done, taking in consideration application context.
+As data-centers do not have all the data, it is of foremost importance to ensure that, for most transactions, the data accessed is all in a single data-center.
+Otherwise, a transaction may require multiple data-centers to be contacted/synchronized with \cite{spanner, sipre, chronocache, slog}, even under weak consistency models such as causal consistency.
+This may severely hinder throughput and lead to high latency, even under weak consistency models, which negatively affects the user experience \cite{eiger, mdcc}.
+Thus, careful fine-tuning of the partition scheme is important, and studies have been done for systems to self-adjust to changes on access patterns, by automatically migrating data between data-centers \cite{slog}.
+If there is no locality on data or some other criteria to externally partition data, full replication may be more appropriate, specially under weak consistency.
+
+\todo{Do I need some concluding note here/reference to PotionDB? Is this too much information?}
+
+%Need citation for the disadvantages/shortcoming of partial replication
+%Need citation for the advantages
+%Maybe list all (or some) papers that make use of partial replication
 
 \subsection{Geo replication}
 
 \todo{This introduction may not be needed depending on what I say on... the Introduction itself. Also when I did this introduction, geo replication's section was before partial replication... does this intro still make sense?}
 
-%Citations for wide-replication. I know COPS is one of them, probably Spanner classifies too
-%Saturn is geo distributed
-%References I need: internal sharding in datacenters; someone claiming costs are expensive with full replication; possibly some examples of high. Maybe someone claiming geo-distribution is hard due to latency vs strong consistency.
-%Citation for user experience factor.
-%Citation of wide-replication, as well as systems applying it
-%Citations for strong consistent, wide/geo replicated systems.
-%Citations for weak consistent, wide/geo replicated systems. Check if things like chainreplication as also done with geo in mind.
-%Citations for systems trying to go around the "limitations" of each solution (e.g., going around limitations of strong or weak)
-
 Many Internet services nowadays are deployed on a global scale with millions of users from all over the globe.
 This leads to large-scale services having data-centers spread across the globe (geo-distributed), in order to ensure low latency to all users, as well as provide solid fault tolerance.
-However, deploying geo-distributed systems is challenging due to the high latency between faraway data-centers. Availability is also difficult if strong consistency is desired, as previously discussed in Section \ref{sec:cap}.
+However, deploying geo-distributed systems is challenging due to the high latency between faraway data-centers \cite{mdcc, eiger, chronocache, slog}. Availability is also difficult if strong consistency is desired, as previously discussed in Section \ref{sec:cap}.
 Geo replication concerns all systems which have a need to have their data replicated in multiple parts of the globe, usually with some parts being faraway from each other and, thus, have to employ mechanisms to deal with high latency.
 
 A related concept is wide-replication.
 Wide-replication shares similar concepts with geo-replication, namely the existence of multiple data-centers in different places. 
 However the distance is usually somewhat limited (e.g., all data-centers located in the United States).
-Some systems in the literature have been designed with wide-replication in mind.
-In this scenario however, having to coordinate with more than one data-center may be acceptable, as the latency is still low enough (below 100ms  \footnote{For instance: Amazon's AWS servers in the United States have below 70ms latency among themselves, while the European's servers have below 50ms.}).
-In geo-replication, this may become prohibitively expensive, as latencies between faraway data-centers are in the hundreds of milliseconds, which can easily degrade the user experience.
+Some systems in the literature have been designed with wide-replication in mind \cite{spanner, cops}.
+In this scenario however, having to coordinate with more than one data-center may be acceptable, as the latency is still low enough \cite{spanner} (below 100ms\footnote{For instance: Amazon's AWS servers in the United States have below 70ms latency among themselves, while the European's servers have below 50ms.}).
+In geo-replication, this may become prohibitively expensive, as latencies between faraway data-centers are in the hundreds of milliseconds, which can easily degrade the user experience \cite{mdcc, eiger, chronocache}.
 
 \todo{Does that part of "below 100ms" need any citation? And the amazon examples in the footnotes, does that need citation? I took from here: https://www.cloudping.co/grid}
 
 Given the reasons above, solutions designed with geo-distribution in mind are required.
-Solutions offering strong consistency for geo-distributed scenario exist \cite{???}, but they usually have very high latency, reduced availability and possibly low throughput.
-Some systems try to go around those shortcomings, e.g. by making use of locality with partial replication, but they still suffer from the same problems when data from multiple data-centers needs to be accessed.
+Solutions offering strong consistency for geo-distributed scenario exist \cite{mdcc, slog}, but they usually have very high latency, reduced availability and possibly low throughput.
+Some systems try to go around those shortcomings \cite{mdcc, chronocache, slog, walter}, e.g. by making use of locality with partial replication, but they still suffer from the same problems when data from multiple data-centers needs to be accessed.
 Also, they tend to even have more limitations on availability of some data, as the partial replicas tend to be nearby.
-Other systems offer strong consistency for data access in one data-center and weaker consistency for data access across data-centers.
-While the trade-off is interesting, it still leads to applications having to deal with issues inherit to weak consistency.
+Other systems offer strong consistency for data access in one data-center and weaker consistency for data access across data-centers \cite{cops, eiger, walter}.
+While the trade-off is interesting, it still leads to applications having to deal with issues inherit to weak consistency. E.g., updates done in different data-centers will be replicated under weak consistency, thus clients still observe the effects of weak consistency.
 
-Finally, solutions offering weak consistency are attractive for geo-replication, as they coupe more easily with high latency, partial replication and are more scalable with the number of users.
-However, some systems offer only eventual consistency, which is difficult for application programmers to work with due to its very weak guarantees.
-Thus, research has been done in trying to bring causal consistency to wide-distributed and geo-distributed systems \cite{???}, with causality across objects, specially under partial replication, being challenging.
+Finally, solutions offering weak consistency are attractive for geo-replication, as they coupe more easily with high latency, partial replication and are more scalable with the number of users \cite{eiger, cure, walter}.
+However, some systems offer only eventual consistency (e.g. Dynamo), which is difficult for application programmers to work with due to its very weak guarantees.
+Thus, research has been done in trying to bring causal consistency to wide-distributed and geo-distributed systems \cite{cops, eiger, saturn, cure, walter}, with causality across objects, specially under partial replication, being challenging.
 The weak consistency systems can provide very low latency due to usually not needing to coordinate with other servers, but even with causality, it can be difficult to program applications on top of such systems. %Should cite here the one system that tries to provide a relational view on geo distributed.
 
 \todo{Not sure if the text below is necessary/should be in some other form. Likely need to revisit this after other chapters are written/developed}
 
 PotionDB is a key-value store which is geo-replicated and allows to provide both partial replication and full replication.
 System administrators can decide, for each group of objects, if they should be fully replicated or partially replicated, and, in case of the latter, in which servers each group should be replicated in.
+PotionDB also makes usage of internal partitioning inside each server to make usage of multi-core CPUs.
 The main challenge of PotionDB consists in providing consistent views that concern global data, under a form of weak consistency (causal consistency) and without all the required data being in a single server.
 Provisioning of said views should only require interacting with a single server also, to ensure low latency.
 
