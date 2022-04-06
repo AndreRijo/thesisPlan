@@ -33,7 +33,7 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {2.2.3}CRDTs and other conflict resolution techniques}{6}{subsection.2.2.3}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {2.3}Antidote}{6}{section.2.3}%
+\contentsline {section}{\numberline {2.3}Antidote}{7}{section.2.3}%
 \defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {2.4}Replication}{7}{section.2.4}%
 \defcounter {refsection}{0}\relax 
@@ -41,38 +41,52 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {2.4.2}Operation and state based replication}{8}{subsection.2.4.2}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{State-based \cite {crdt}.}{8}{section*.23}%
+\contentsline {paragraph}{State-based \cite {crdt}.}{8}{section*.24}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Operation-based \cite {crdt}.}{8}{section*.24}%
+\contentsline {paragraph}{Operation-based \cite {crdt}.}{8}{section*.25}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{CRDTs \cite {15}.}{8}{section*.25}%
+\contentsline {paragraph}{CRDTs \cite {15}.}{8}{section*.26}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Shortcomings and optimizations.}{8}{section*.26}%
+\contentsline {paragraph}{Shortcomings and optimizations.}{9}{section*.27}%
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {2.4.3}Partial replication}{9}{subsection.2.4.3}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Internal partitioning.}{9}{section*.27}%
+\contentsline {paragraph}{Internal partitioning.}{9}{section*.28}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{External partitioning}{9}{section*.28}%
+\contentsline {paragraph}{External partitioning}{10}{section*.29}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.4.4}Geo replication}{10}{subsection.2.4.4}%
+\contentsline {subsection}{\numberline {2.4.4}Geo replication}{11}{subsection.2.4.4}%
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {2.4.5}Non-uniform replication}{12}{subsection.2.4.5}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.4.6}Replication in PotionDB}{12}{subsection.2.4.6}%
+\contentsline {subsection}{\numberline {2.4.6}Replication in PotionDB}{13}{subsection.2.4.6}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {2.5}Views}{12}{section.2.5}%
+\contentsline {section}{\numberline {2.5}Data access}{13}{section.2.5}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {2.6}Thoughts}{12}{section.2.6}%
+\contentsline {paragraph}{Key-value stores.}{13}{section*.36}%
 \defcounter {refsection}{0}\relax 
-\contentsline {chapter}{Bibliography}{14}{section*.34}%
+\contentsline {paragraph}{Relational databases.}{14}{section*.37}%
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.5.1}Queries}{14}{subsection.2.5.1}%
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.5.2}Speeding up queries - views and indexes}{15}{subsection.2.5.2}%
+\defcounter {refsection}{0}\relax 
+\contentsline {paragraph}{Indexes.}{15}{section*.40}%
+\defcounter {refsection}{0}\relax 
+\contentsline {paragraph}{Views.}{15}{section*.41}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.6}Existing systems}{16}{section.2.6}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.7}Thoughts}{16}{section.2.7}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{Bibliography}{18}{section*.45}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{Appendices}{}{}
 \defcounter {refsection}{0}\relax 
-\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{17}{appendix.A}%
+\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{21}{appendix.A}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{Annexes}{}{}
 \defcounter {refsection}{0}\relax 
-\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{18}{annex.A}%
+\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{22}{annex.A}%
 \babel@toc {english}{}
 \babel@toc {english}{}

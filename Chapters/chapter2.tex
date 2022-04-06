@@ -69,8 +69,7 @@ One of the most basic consistency models is eventual consistency \cite{understan
 In short, eventual consistency provides only one guarantee: when updates stop occurring, eventually the state of the replicas will converge.
 However, several issues are left in the open. For example: what happens when the same object is concurrently updated? Which states can be observed on reads? How do the states evolve as updates are being applied?
 
-%TODO: Monotonic reads paper
-Many other weak consistency models have been studied in the literature \cite{understandingEC, session, cops, dynamo, cassandra, walter}, e.g. causal consistency, causal+, monotonic reads, etc.
+Many other weak consistency models have been studied in the literature \cite{understandingEC, session, cops, dynamo, cassandra, walter}, e.g. causal consistency, causal+, monotonic reads, PSI, etc.
 Causal consistency is of particular interest as it provides useful guarantees.
 In a general form, causal consistency ensures that operations casually related  \cite{lamport2019time}, i.e. in which one happens before the other, are seen according to said order by every client.
 This means that, e.g., a read that happens after a write must reflect the effects of said write.
@@ -91,8 +90,24 @@ This means that after a value is read, it is not possible to read again an older
 It is however possible to read stale data, or keep reading the same value despite more recent values existing.
 In distributed systems, it is important to define if this guarantee is given at a single server level or across servers, as the latter may imply having to wait for data to arrive and be processed if the client issues reads in different servers.
 
+Snapshot Isolation (SI) is an interesting model.
+The intuition behind SI is that each transaction sees a consistent view of the database \cite{si}.
+To be more precise, it sees a ``snapshot'', where all the objects are at the same version and the database is in a consistent state.
+Under SI the transactions in a replica are totally ordered, thus preventing concurrency conflicts when updating the same objects.
+Reads on a transaction are executed on the snapshot, never blocking.
+Writes are applied on a higher version when the transaction commits, if no other transaction that commited in the meantime modified the same objects.
+However, some anomalities can still occour under SI.
+E.g., consider two objects 'c' and 'd', and two transactions 'A' and 'B'.
+Consider now that both transactions read 'c' with value of 5. 
+If transaction 'B' updates 'c' to 10, and transaction 'A' reads 'c' and copies the value of 'c' to 'd', both transactions can commit.
+However, it is possible for 'B' to be ordered before 'A' and yet, end up with 'c' = 10 and 'd' = 5.
+This would not be possible under serialization.
+
+Parallel Snapshot Isolation (PSI) is an extension of SI that allows transactions in different replicas to commit in different orders \cite{walter}.
+This model is useful for weak consistency systems, as they can provide strong guarantees when clients access only one server and, for example, causality between updates on different replicas, thus still allowing high performance. \todo{I do critize this hybrid approach in the geo replication section.}
+
 \todo{This text will most likely need to be changed depending on how the introduction is written.}
-In PotionDB we provide Causal+ consistency (hereafter causal consistency), including between different objects.
+In PotionDB we provide PSI, with causal+ consistency (hereafter causal consistency) for transactions executed in different servers. Our causality guarantees are cross object.
 The views provided in our system are directly co-related to the data of other objects, thus it is desirable that when a client observes a change in said objects, they can also observe the change in the views.
 We provide causality even if the client contacts a different server.
 \todo{Likely need a better way to talk about this challenge.}
@@ -101,6 +116,7 @@ Thus, it is possible for views to be related with objects of different partition
 Causality must be ensured despite such difficulty, i.e., causality between objects that are not even replicated in the same server.
 
 To accommodate use cases in which higher throughput is desirable and causality is not needed for the read, we also provide monotonic reads as long as the client is sticky to one server.
+We note that even in this scenario, the client always reads state left by some commited transaction, i.e., there is no interferance  from ongoing transactions.
 
 \subsection{CRDTs and other conflict resolution techniques}
 
@@ -292,31 +308,175 @@ Provisioning of said views should only require interacting with a single server 
 
 \subsection{Non-uniform replication}
 
+The usage of partial replication can already reduce networking and storage costs, by reducing the amount of places each object is replicated on.
+However, it does not help with the case of popular objects that may have a big size or have a lot of updates.
+
+\todo{A better example may be needed for this?}
+Consider a worldwide e-commerce application, with hundreds of thousands of different products (like Ebay or Amazon).
+A naive way to maintain a leaderboard of the ``top 10 most sold products'' would be to use an object which keeps a sum of how many units each product sold.
+This would imply having to generate an update for this leaderboard whenever a product is sold somewhere, and have this update be propagated and processed everywhere.
+However, the vast majority of the updates would not affect the visible state (the top 10) of the leaderboard - updates to an element not on top do not affect the result of reads of the said leaderboard.
+
+Non-uniform replication \cite{nonUniform} is useful for situations as the one described above.
+With non-uniform replication, only updates that may change the visible state of the objects would be propagated.
+Other updates would only be stored locally (and potentially to a few other replicas for fault tolerance) for the case in which it may become relevant later on.
+Using non-uniform replication, it is possible to save on both storage and network costs, as less operations are replicated, processed and stored.
+In some objects, it is even possible to discard operations entirely \cite{nonUniform} - e.g., in an object responsible to keep the max number of sales in a day of a product, any number of sales of a day that is below the max does not need to be propagated and can be discarded.
+In short, the idea behind non-uniform replication is to reduce the amount of data that needs to be propagated and stored, while still ensuring any query can be served fully at any replica.
+
+Cabrita et. al. \cite{nonUniform, nonUniformThesis} propose some non-uniform CRDTs.
+Namely, they propose Top-K, Top-Sum (similar to Top-K but supports increments to entries), histograms and a filtered set as CRDTs using non-uniform replication.
+Another concept that is related is computational CRDTs \cite{computationalCrdt}.
+The idea behind computational CRDTs is that, for some objects, the client is not interested in the actual state of the object but rather the result of some computation.
+For example, in an object that keeps an average, the client is only interested in the average value - the values of each element that was added to the average is not relevant.
+Thus, it is not necessary to keep each individual value, but rather enough information to calculate the result (in this case, the sum of all adds and the number of additions).
+
+Both computational and non-uniform CRDTs are useful for PotionDB.
+We can leverage on both concepts in order to supply many different kinds of objects, which allow us to provide very rich views or summaries of data. 
+This, in turn, allows us to efficiently and easily answer many different kinds of queries, keeping the storage and network overheads low.
+We have already developed new CRDTs based on these concepts, namely a max/min CRDT and an average CRDT.
+We have also extended the design of TopSum CRDT to support decrements.
+With the CRDTs already implement, many SQL-like function queries are already supported, such as \emph{order-by}, \emph{group by}, \emph{limit}, \emph{average}, \emph{sum}, etc.
+%We also extended both TopK and TopSum to support extra ``data'' to each entry
+
+\todo{Not sure if the text above should be here or in the research statement. Also should the research statement include an example of how we convert a query to objects in PotionDB?}
+
+%Give examples of objects.
+%Talk about computational CRDTs
+%Explain how this helps PotionDB
+
+
+%Idea: reduce storage and network costs (not every data needs to be replicated everywhere). However, still replicate enough data to reply to any query
+
+%Mention about usefulness. Mention about some datatypes, both proposed in the paper and the ones I made. Mention about computacional CRDTs also having similar ideas (I'll need to check a paper on this). In the uniform paper they mention the similarities with computacional CRDTs (and how non-uniform is an extension of it).
+
+%Will have to explain about the differences in states - same observable state vs same state.
+
+%Mention how this can be combined with partial replication. And how it all fits in PotionDB.
+
+%I might have to mention about non-uniform eventual consistency... but I'd rather not.
+
 \subsection{Replication in PotionDB}
+Is this needed? A subsection where I talk about the choices in PotionDB related with replication (or to be more precise, with the topics discussed before)? I feel like mentioning PotionDB in some of the subsections is enough, and likely it should be more detailed in the Research Statement instead of this state of the art.
 %Likely not needed and I should just mention as we go by how we use each kind of replication.
 
 %General introduction about why replication is needed, its usage/beneficts and also costs
 %Then go into each category of replication. Async vs sync? Then geo? Then partial? Then op vs state CRDT and end with non-uniform?
 
-\section{Views}
+\section{Data access}
 
-Here talk about views in common databases. What is their use, their advantages and disadvantages. Also talk about common queries/operations in relational databases which we will have to mimic. On the Research Statement, I should mention how we are mimicking/plan to mimic them.
-Mention and discuss existing solutions.
+Most online services nowadays require storage solutions in order to support said services.
+Often, databases are leveraged on in order to store and provide an interface to access the service's data.
+E.g., in an e-commerce application, databases may be used to store the stocks of products, shopping carts, customer information, etc.
+It is expected for databases to provide an easy and quick access for data, while also managing how the data is stored and kept consistent.
 
-%Maybe say that in PotionDB we decided to use CRDTs and explain the advantages. Mention the other possible solution (operational transformation) and why that one was not choosen.
+While many solutions for presenting data exist, two of the most common ones are key-value stores and relational databases.
 
+\paragraph{Key-value stores.}
+Most key-value stores present a very simple interface with two basic operations - \emph{get} and \emph{put}.
+The former allows users to obtain the state of an object, while the latter updates or stores an object.
+Each object is accessed by providing a key that uniquely identifies it.
+Some databases only provide opaque objects, while others may provide more rich interfaces by supporting objects such as counters, maps and sets, alongside appropriate operations on those.
+PotionDB provides a key-value interface, with support for many different kinds of objects, operations and even for materialized views.
 
+\paragraph{Relational databases.}
+Relational databases provide a so-called relational model.
+In relational databases, data is organized in tables, with possible relationships between tables and the columns of different tables.
+E.g., each entry in a table ``customers'' may refer to one or more entries in the table ``addresses''.
+Usually, columns represent the fields of a table, while each row represents one entry (data) in the table.
+Many systems provide SQL (\textbf{S}tructured \textbf{Q}uery \textbf{L}anguage) to define and access the data, which allows for a rich interface in accessing data and easy processing of said data.
+For example, with a SQL query, it is possible to obtain directly from the database the average of salaries of users in a given company.
+In comparison, in key-value stores, usually one would have to obtain multiple objects, calculate the average and then present the result, or store the pre-calculated result under some key.
 
-%Focus on causal consistency
-%Discuss about causality in same object and different object
-%Make some conclusions on PotionDB about consistency.
+Key-value stores are easier to implement.
+Due to their simplicity, it is often easier to provide good performance, and is often applied by weak consistent systems.
+On the other hand, relational databases have a richer interface, which eases application development, but are tougher to design and optimize for, being mostly used by databases providing strong consistency.
+Some key-value stores provide extra features in order to facilitate application development by, e.g., providing many object types and extra operations.
 
+\subsection{Queries}
 
-%Present weak consistency in general
-%Explain eventual consistency
-%Mention strong and weak points of weak consistency
-%Present other models, namely casual consistency. Explain in-object and cross-object casual consistency
-%Refer our choice in PotionDB, possibly in another section.
+%Key-value stores typically offer simple interfaces, often gets and puts of data blobs. %Need a citation for this. Check some paper that claims this is not rich enough.
+%However, this makes application development more difficult, as relationships between objects and their correctness have to be maintained by the application logic.
+%This makes the relational model often provided by strong consistency systems interesting, as it eases application development.
+
+%One way to ease this is to provide a key-value store with a rich interface - e.g., by providing many kinds of different objects and different reads/update operations.
+%This still maintains the ease of development and high performance of key-value stores, while also easening application development.
+%To achieve this, it is important to consider which kind of operations are often used by applications.
+Applications access data in different ways.
+Some may mostly access the data directly, e.g., fetch information about a product in an e-commerce system.
+Others may require summaries, aggregations, sorting of data or even more complex processing.
+
+\textbf{O}n\textbf{l}ine \textbf{A}nalytical \textbf{P}rocessing, OLAP, is a method which consists on ways to analyse and organize data by executing analytical queries.
+These kind of queries are often used in the context of marketing, financial report or business decisions.
+For example, in an e-commerce system, it may be useful to know the most popular products at any given moment, in order to keep their stock available and e.g. adjust prices or advertisement.
+This poses a challenge, as very large amounts of data need to be analysed (all sales), with updates often occurring (new sales, new products) and in short periods of time (information needs to be available fast to make a decision while it is still relevant).
+Views, indexes and windowed data are some of the most common methods to provide these kind of queries.
+Operations such as table joins, sums/averages of data, sorts, limits, group by and others are used by this kind of queries.
+
+The TPC-H benchmark provides a specific example for a database managing sales data which aims to provide useful information for business decisions.
+The queries listed in said benchmark provide a good example of the kind of queries executed in analytical scenarios.
+One key requirement of analytical queries nowadays is to provide useful information with queries of quick execution, while many updates are happening on the background.
+
+\todo{Maybe the paragraph below, or parts of it, should be in the research statement}
+PotionDB is a geo-distributed database which aims to provide low latency for recurring queries.
+Analytic queries fit such criteria (e.g., checking the most sold products is a recurring query).
+We aim at providing such queries with a very low latency, similar to a normal query, while keeping the costs on storage low (partial + uniform replication).
+As of now, PotionDB already supports many different kinds of CRDTs, providing solutions to answer queries often executed in OLAP scenarios.
+Support for operations such as the ones referred before are already provided, and it is possible to support more if needed by adding new CRDTs to represent different kinds of objects or operations.
+ 
+
+%Maybe end with a concluding note that later on more research can be done to find more types of applications/operations we may want to provide support for, or that PotionDB is extensible (e.g. - add more CRDTs)
+
+%I might have to look into "OLAP". Online Analytical Processing. So for stuff like data mining, report writting, business reporting for sales, marketing, management, etc.
+
+%Maybe I can start by looking into the SQL language. Then some papers providing strong consistency/SQL-like languages. There's one paper too providing weak consistency with relational model. Then also those papers of analytic queries/ChronoCache.
+
+%Can't find anything in the existing papers. Will have to search some other way. I did find at least a few systems supporting materialized views.
+
+\subsection{Speeding up queries - views and indexes}
+
+In order to provide applications with easier and quicker access to data, mechanisms have been studied to complement direct data access.
+Some of those mechanisms include usage of key-value stores as caches, indexes, views, data streaming, etc.
+\todo{I probably need something more here to finish the paragraph... suggestions?}
+
+\paragraph{Indexes.}
+An index is a record whose goal is to speed up how quickly data is found.
+In the context of a relational database, an index can be done on a column of a table to provide a quick way to access data by some criteria other than the primary key.
+E.g., an index on users' data may provide quick access by phone number.
+It can also be used to help group data in groups or sort more efficiently.
+In non-relational databases, an index can point to the location of certain items.
+E.g., a map can store all the keys of users, and each key can then be used to directly access the data of a given user.
+Multiple systems implement indexes of various kinds to help speed up queries and data access.
+Efficiently designing, using, storing and maintaining indexes is a common research topic.
+
+\paragraph{Views.}
+A view consists in a different way to present data.
+In the context of databases, it is defined as being the result of some query.
+Views can be used to filter data (e.g., only show users with age above a certain value), or to accommodate subqueries that may be used by other queries (e.g., a join of two tables in the case of a relational database).
+Thus, in many databases, the main usage of a view is to simplify application development, by letting users define views which act as if they were ``virtual tables'' that do not use storage space but can be used freely in queries.
+These views are re-calculated every time they are used.
+Materialized views, on the other hand, are used with the goal of speeding up queries.
+Materialized views cache the results of a given query, thus they can provide much quicker access to data, avoiding having to re-execute certain queries all the time.
+However, it comes with its downsides - extra disk storage is needed and maintaining the views consistent and automatically updated is challenging, thus few systems implement them.
+
+\todo{Not sure if the paragraph below should be here... or, at least, in this kind of form.}
+PotionDB proposes to provide support for materialized views.
+Materialized views have the potential to answer queries that could take a long time to process in few milliseconds.
+Given PotionDB's geo-distributed, partial replicated nature, the main aim with materialized views is to provide quick and efficient access to data that, without a view, could imply a long and complex query execution across many servers.
+Another goal is to provide such views without requiring all the data referred by a view to be replicated everywhere, thus saving in storage and replication processing costs.
+The views themselves should, however, be replicated everywhere relevant to provide low latency access to them.
+This is thus a quite challenging and novel problem - to the best of our knowledge, PotionDB is the first system to propose providing materialized views in a geo-distributed, partially replicated, weakly consistent scenario.
+The challenge comes from multiple aspects.
+PotionDB's materialized views should have a low storage footprint compared to the data they refer.
+Also, views may refer to data that is spread across many servers, without a single server having all the data required to compute the entire view.
+Furthermore, it is essential for a view to be able to provide a reply to a query without executing complex computations or any communication (e.g., fetching data) with other servers \todo{Not sure if this part of ``without executing complex computations'' is clear.}.
+Finally, our views must also be kept up-to-date and provide causal consistency.
+
+\section{Existing systems}
+
+I need a better title for this... but basically present here some systems. Maybe refer some generic systems, then focus on ones trying to provide views/efficient queries for large scale.
+
+Something to consider. Maybe name the Query section as ``Data Access''. Then put this and views as subsections and here show data storage systems and views solutions and such?
 
 \section{Thoughts}
 
