@@ -45,7 +45,7 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {paragraph}{Operation-based \cite {crdt}.}{8}{section*.25}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{CRDTs \cite {15}.}{8}{section*.26}%
+\contentsline {paragraph}{CRDTs \cite {crdt}.}{8}{section*.26}%
 \defcounter {refsection}{0}\relax 
 \contentsline {paragraph}{Shortcomings and optimizations.}{9}{section*.27}%
 \defcounter {refsection}{0}\relax 
@@ -77,16 +77,24 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {2.6}Existing systems}{16}{section.2.6}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {2.7}Thoughts}{16}{section.2.7}%
+\contentsline {paragraph}{Spanner.}{16}{section*.45}%
 \defcounter {refsection}{0}\relax 
-\contentsline {chapter}{Bibliography}{18}{section*.45}%
+\contentsline {paragraph}{MDCC.}{17}{section*.46}%
+\defcounter {refsection}{0}\relax 
+\contentsline {paragraph}{SLOG.}{17}{section*.47}%
+\defcounter {refsection}{0}\relax 
+\contentsline {paragraph}{Dynamo.}{18}{section*.48}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2.7}Thoughts}{18}{section.2.7}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{Bibliography}{20}{section*.50}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{Appendices}{}{}
 \defcounter {refsection}{0}\relax 
-\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{21}{appendix.A}%
+\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{25}{appendix.A}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{Annexes}{}{}
 \defcounter {refsection}{0}\relax 
-\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{22}{annex.A}%
+\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{26}{annex.A}%
 \babel@toc {english}{}
 \babel@toc {english}{}
