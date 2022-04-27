@@ -10,15 +10,35 @@
 
 \chapter{Research Context}
 
-TODO: A proper introduction to this
+\todo{Is an Introduction like this okay? Or is just mentioning what will be discussed in this chapter enough?}
 
-I think the CAP theorem can be included under consistency subsection, with a proper introduction/context. Likely will need to be shortened though.
+In this research work we propose to provide a geo-replicated, weakly consistent database which provides reliable access to complex analytical queries in near instant time.
+To achieve this goal, multiple concepts need to be combined and leveraged on, e.g., view maintenance, replication, consistency.
+For each concept, multiple different solutions exist and thus it is necessary to make informed choices and leverage on existing solutions/concepts.
 
-I think I'll need to make more of a connection between these topics and PotionDB/choices in PotionDB. Checking our paper is a good way to see how that can be done.
-Or maybe just leave that for the next chapter.
+This chapter organizes as follows.
+Section \ref{sec:cap} describes the CAP theorem, presenting the foundations to the diversity of solutions for data storing.
+Section \ref{sec:consistency} discusses how data consistency is maintained in storage systems.
+Section \ref{sec:replication} introduces multiple concepts related with data replication, raging from replication synchronization to data distribution. Section
+\ref{sec:data_access} focuses on databases and efficient provisioning of queries, closing up with a discussion on existing solutions which apply the diverse concepts introduced in this chapter.
+ \todo{Is this okay? @Reference to Section \ref{sec:replication}}
+
+%Nowadays the internet is full of services, raging from entertainment purposes to e-commerce, information, business and others.
+%Some of these services have a global scale with millions of users, with servers distributed around the globe.
+%These services must be fault tolerant, provide low latency, high throughput, present data consistently and scale as the service grows in number of users.
+
+%The aforementioned goals can often enter in conflict, thus many systems focus only on some of those goals.
+%In this work we plan to 
+
+
+\todo{Note: I am not sure if I should had talked about Antidote/Cure in high detail or not. I talked a bit about Cure on the Existing Systems subsection, is that enough, or does Antidote/Cure deserve a section of its own?}
+
+\todo{Do I need to make more of a connection between the topics and PotionDB? E.g. motivate what we will be doing, how our solution is different/better, etc.?}
 
 \section{CAP theorem}
 \label{sec:cap}
+
+\todo{Should the CAP theorem be included under consistency section, or leave it as it is?}
 
 In an ideal world, distributed systems would all provide strongly consistent data, be always available and keep operating even in the presence of failures and network partitions.
 However, the CAP theorem \cite{cap} states that it is only possible to, at most, provide two out of the three following properties:
@@ -34,9 +54,7 @@ Systems providing \textbf{C}onsistency and \textbf{P}artition-tolerance (CP), ca
 On the other hand, systems providing \textbf{A}vailability and \textbf{P}artition-tolerance can still provide some consistency guarantees, known as Weak Consistency. However, the replicas will diverge at times and conflicting states may be observed due to the concurrent execution of operations.
 
 \section{Consistency}
-
-%TODO: Put here a list of both strong and weak consistency models. "Just" use papers already used for other sections
-%Cassandra may not really be needed. Dynamo may be useful for eventual; cops may be useful if I talk about causal+.
+\label{sec:consistency}
 
 In the literature, a plethora of consistency models have been specified \cite{linearizability, si, spanner, understandingEC, cops, dynamo, cassandra}, each one providing different guarantees to the developers in terms of the states that can be observed, as well as different requirements to deploy such models.
 Despite the variety of models, they can be grouped as either being a form of \emph{Strong Consistency} or \emph{Weak Consistency}.
@@ -140,11 +158,8 @@ The intuition behind OT is that conflicting operations can, when arriving on a r
 However, it is usually considered harder and more error-prone to design said transformations instead of, as in CRDTs, designing operations to be commutative from the start \cite{otCorrectness, crdt}.
 We believe CRDTs' ease of use and flexibility with solving conflicts justify its usage over OT-based solutions in PotionDB.
 
-\section{Antidote}
-
-Does this actually need a section of its own? Or should I refer it alongside other solutions and give more detail to this one?
-
 \section{Replication}
+\label{sec:replication}
 
 %Must talk here about replication, partial replication, non-uniform replication and geo replication. May also have to talk here about op vs state based CRDTs and potentially state machine replication.
 
@@ -169,9 +184,7 @@ Combining these mechanisms with synchronous replication allows to ensure that no
 
 In asynchronous replication, an update can be confirmed before it is sent to other replicas.
 This makes it ideal for weakly consistent systems as it allows them to quickly confirm operations to the clients \cite{cops}.
-Replication happens in the background, possibly even delayed in order to allow grouping with other operations for efficiency \cite{dynamo}.
-
-\todo{If I refer to Antidote/Cure, I can probably use that citation above.}
+Replication happens in the background, possibly even delayed in order to allow grouping with other operations for efficiency \cite{dynamo, cure}.
 
 Synchronous replication provides strong guarantees about the state evolution of the systems, ensuring data and updates are not lost and always consistent.
 However, having to wait for the confirmation of other replicas not only limits fault-tolerance \cite{spanner} but also raises considerably the latency of each operation when replicas are far-away, making it unusable for geo-distributed systems or scenarios where low latency is essential \cite{slog}.
@@ -356,14 +369,12 @@ With the CRDTs already implement, many SQL-like function queries are already sup
 
 %I might have to mention about non-uniform eventual consistency... but I'd rather not.
 
-\subsection{Replication in PotionDB}
-Is this needed? A subsection where I talk about the choices in PotionDB related with replication (or to be more precise, with the topics discussed before)? I feel like mentioning PotionDB in some of the subsections is enough, and likely it should be more detailed in the Research Statement instead of this state of the art.
-%Likely not needed and I should just mention as we go by how we use each kind of replication.
 
 %General introduction about why replication is needed, its usage/beneficts and also costs
 %Then go into each category of replication. Async vs sync? Then geo? Then partial? Then op vs state CRDT and end with non-uniform?
 
 \section{Data access}
+\label{sec:data_access}
 
 Most online services nowadays require storage solutions in order to support said services.
 Often, databases are leveraged on in order to store and provide an interface to access the service's data.
@@ -468,16 +479,13 @@ This is thus a quite challenging and novel problem - to the best of our knowledg
 The challenge comes from multiple aspects.
 PotionDB's materialized views should have a low storage footprint compared to the data they refer.
 Also, views may refer to data that is spread across many servers, without a single server having all the data required to compute the entire view.
-Furthermore, it is essential for a view to be able to provide a reply to a query without executing complex computations or any communication (e.g., fetching data) with other servers \todo{Not sure if this part of ``without executing complex computations'' is clear.}.
+Furthermore, it is essential for a view to be able to provide a reply to a query without executing complex computations or any communication (e.g., fetching data) with other servers.
 Finally, our views must also be kept up-to-date and provide causal consistency.
+ \todo{Not sure if this part of ``without executing complex computations'' is clear.}
 
-\section{Existing systems}
+\subsection{Existing systems}
 
-I need a better title for this... but basically present here some systems. Maybe refer some generic systems, then focus on ones trying to provide views/efficient queries for large scale.
-
-Something to consider. Maybe name the Query section as ``Data Access''. Then put this and views as subsections and here show data storage systems and views solutions and such?
-
-I'm planning to talk about these systems: Spanner, MDCC, SLOG, Dynamo, Cops or Eiger, Cure, Walter, Noria, ChronoCache, TxCache, DBToaster, DBProxy (maybe, not sure yet if I will talk about this last one)
+\todo{Suggestions for a better title? Also does this need some sort of introduction?}
 
 %Spanner		% Strong consistency
 %MDCC			% Strong consistency, geo-distributed. Tries to do 1 round trip
@@ -552,43 +560,140 @@ Gossip is used to handle changes to the membership and failures, as well as buil
 Dynamo's structure allows it to provide low latency replies even at the 99.9\% percentile, while ensuring high availability and data durability.
 However, providing only eventual consistency, having conflicts be merged by applications and no object abstractions increases the difficulty of developing applications that use Dynamo.
 
-\section{Thoughts}
+\paragraph{COPS.} COPS \cite{cops} is a weakly consistent key-value store for the wide-area.
+COPS defines and provides causal+ consistency, with causal relationships possible even between objects in different servers (data can be partitioned inside a datacenter but not across datacenters).
+Read transactions are also provided in one of COPS' versions (COPS-GT) in order to read multiple objects in the same version.
 
-So here it is basically a very extended state of the art (similar to how I did in my master's? A bit smaller though)
-Which topics do I want to touch about here?
-\begin{itemize}
-	\item CAP
-	\item Consistency levels (probably a lot to cover here - from weak to strong, multiple types of weak, causality between objects/same object, etc.)
-	\item CRDTs
-	\item Antidote.
-	\item Partial replication
-	\item Non-Uniform replication
-	\item Geo replication
-	\item State partition???
-	\item Views/indexes. Namely materialized views.
-	\item Maybe typical database queries/operations (limit, sort by, etc.)? Has some relevance as we aim to provide views with CRDTs.
-	\item Other similar solutions (ChronoCache, etc. Check the paper). Must definitely mention things like Noria and predictive treaties.
-\end{itemize}
+Operations are linearizable inside a datacenter, and causally consistent across datacenters.
+Extra metadata is stored in the database for the COPS-GT version, with multiple efforts for garbage collection in both COPS and COPS-GT.
+However, providing read transactions comes at a cost - in some scenarios, COPS-GT has lower throughput compared to COPS.
+Also, COPS-GT's metadata size may grow unbound under network partitions, has some garbage collection mechanisms can only happen when all datacenters can communicate with each other.
+The lack of write transactions, read+write transactions and more rich objects are some shortcomings the authors address in Eiger \cite{eiger}.
+Neither COPS nor Eiger offer support for partial replication across datacenters.
 
-What about subsections?
-\begin{itemize}
-	\item Replication
-	\item Consistency (can probably include CAP and state partition?)
-	\item Other solutions?
-\end{itemize}
+\todo{Should I describe Cure in higher detail since PotionDB is based on Cure?}
+\paragraph{Cure.} Cure \cite{cure} is a key-value store providing causal consistency with geo-replication.
+Cure focus on being always available while still providing as many guarantees and ease of use as possible.
+Namely, it provides highly available, causally consistent transactions (both read, write and mixed), with clients reading a consistent snapshot.
+It also provides CRDTs representing many different data types and with different, automated, ways of solving conflicts, unlike many other datastores only offering registers.
+The combination of all these features is novel.
 
-For consistency, I can check Albert's PHD plan for references. Same for conflict resolution techniques in CRDTs.
-Check our paper and my master's thesis for more topics/references too.
+Cure presents some optimizations to ensure non-blocking reads, as well as ensuring consecutive snapshots are increasingly more recent even under failures.
+However, under some scenarios performance is considerably lower than other solutions.
+Clients may have to wait when doing failover datacenters.
+It also does not support partial replication or other useful utilities such as views.	\todo{To be honest, I don't really know what to put here as a disadvantage.}
 
-Note: On research statement, I can talk about TPC-H, and even give an example on how to transform a TPC-H query into CRDTs.
-%\chapter{NOVAthesis Template \emph{User's Manual}}
-%\label{cha:users_manual}
+\paragraph{Walter.} Walter \cite{walter} is a geo-replicated key-value store with interesting semantics.
+Walter supports partial replication and makes usage of two interesting features: preferred sites, where writes of an object are more efficient; counting sets (csets), a set where all operations are commutative (similar to a set CRDT).
+Walter ensures no write-write conflicts are possible, thus not needing conflict resolution techniques.
+Transactions in a given site can be fast commited, without synchronization with other sites, if all objects updated either are csets or are preferred on said site.
+Thus with usage of data locality and csets, some applications may have good performance with Walter.
+However, any transaction updating an object in another preferred site falls back to 2PC, which is slow in geo-distributed scenarios and may block under partitions.
+Thus, if locality is not perfect, Walter suffers from similar downsides to strongly consistent systems.
+The authors also define Parallel Snapshot Isolation (PSI), by being an extension of SI where different sites can commit concurrently as long as no write conflicts occur.
 
-This phrase from the grant documents can be useful:
-''In this work we propose to design a novel replication model levering on the advantages of both partial and non-uniform replication. We will also conduct research on integrating multiple consistency models in our proposal, which is challenging due to transactions spanning multiple partitions and materialized views referring to multiple partitions. We will also implement our model in a database prototype.´´
+\paragraph{Noria.} Noria \cite{noria} is a streaming data-flow system aimed for web applications which tolerate eventual consistency.
+Noria focus on addressing common problems of both data-flow systems and databases, namely, windowed data for the former and materialized views for the latter.
+The main contribution is their partially-stateful data-flow model.
+This model allows to serve queries on all data, yet only maintain partial state on the operators.
+New entries are automatically added to the partial state, and unused entries evicted.
+To further save on memory usage, an extensive re-use of operators is applied.
+Noria addresses on how to efficiently provide queries and updates on such a system model.
 
-To talk about how difficult/novel the problem is, mention that: - we combine partial + uniform replication (novel) in a geo-distributed scenario + has to handle consistency for transactions spanning multiple partitions, ensuring both partially replicated objects and materialized views stay updated and correct.
+Noria provides partially materialized views, which are incrementally maintained.
+The authors claim providing materialized views for every query is feasible with Noria. It is also claimed that application development is easier compared to a cache + database setup as there is no need for manual caching or ad-hoc tables to store intermediate results.
 
-Check the FCT grant docs for objectives/contributions too (dynamic partition (add/remove replicas on the fly), stronger consistency models are particularly interesting to mention.)
+Noria provides impressive performance, however it has its shortcomings.
+State eviction from partial state is random, which is sub-optimal.
+It does not support parametrized range queries (e.g., day > 10) nor multi-column joins; failures lead to inefficient recomputation of the data-flow.
+Only eventual consistency is provided unlike in many other highly available databases, making application development harder.
+Replication is also not addressed nor is geo-distribution, both essential to many web services nowadays.
+Sharding is supported but some cross-shard operations are inefficient.
 
-May be worth mentioning my Master's work (and the published paper) - if needed, I have the knowledge and experience to design new CRDTs, and also understanding of consistency levels.
+\paragraph{ChronoCache.} ChronoCache \cite{chronocache} is a mid-tier (between client and database) caching system for geo-distributed scenarios.
+ChronoCache does not store only static data - it aims to store query results automatically and predict upcoming queries, executing them before they are issued by the client.
+Thus, by having ChronoCache located close to the clients, query predicting can lead to savings in long round-trips.
+
+ChronoCache does not use offline training.
+Instead, it analyses clients' patterns, grouping queries in dependency graphs and analysing correlations between queries.
+It also analyses odds of some queries being followed by others, as well as detecting queries issued in loops.
+In the latter, ChronoCache can predictively execute the whole loop after the first query of the loop is issued by the client.
+
+ChronoCache can help speed up applications with constant access patterns.
+However, applications with considerable update ratios or with less repetitive access patterns may not benefit from ChronoCache as much as, e.g., from a materialized view.
+ChronoCache is also limited by the availability of the underlying database, thus network partitions may lead to a system halt.
+
+\paragraph{TxCache.} TxCache \cite{txcache} is a caching system focusing on providing strong consistency guarantees.
+Many caching solutions provide only eventual consistency.
+In contrast, TxCache provides snapshot isolation and causality guarantees.
+This is achieved by keeping track of the versions of each database item.
+Reads on TxCache are likely to be stale, but the user can set a staleness limit.
+TxCache always ensures a consistent, even if stale, snapshot view of the database, easing application development compared to other caching solutions (e.g., memcached) that do not even provide transactions.
+TxCache requires considerable modifications on the database in order to notify TxCache of data invalidity, as well as serve reads on a given version. Its API is, however, easy to use for applications, as applications only need to designate functions as "cacheable".
+Internally, TxCache keeps a cache of query results with a validity range for each result - this allows to know in which snapshots can each result be used on for future queries.
+
+TxCache has some considerable limitations.
+Read-write transactions execute directly on the database to avoid anomalies, thus take no benefit from caching.
+Only functions with no side effects, deterministic and not dependent on external factors (e.g., system time) can be cacheable (TxCache does not check this requirement, leading to possible development bugs).
+Required changes to the database may be difficult/lengthy, leading to potential bugs.
+Index or sequential scan queries lead to cacheable data that will be invalidated with any update to relevant tables, despite possible conditions on the queries allowing for smarter eviction strategies.
+
+\paragraph{DBToaster.} DBToaster \cite{dbtoaster} is a database focused on managing large datasets with a constant update stream.
+Efficient support of analytical queries is desired, thus DBToaster focuses on long-running queries concerning large sets of data.
+DBToaster provides materialized views with incremental view maintenance, making usage of delta queries to efficiently keep the views up-to-date.
+Techniques are applied to automatically generate materialized views, potentially dividing a materialized view in many parts for efficiency.
+By making usage of delta-queries and view splitting, they define triggers which update most views in constant time for each update, avoiding costly loops and table joins.
+Query re-writing rules are also provided, alongside an heuristic optimizer that uses said rules to further optimize views and their maintenance.
+
+DBToaster shows that it is possible to answer complex queries with materialized views and have affordable maintenance costs.
+However, some queries with nested aggregates still have to use full view rebuilding, as well as efficient support of aggregates other than sums.
+Queries with inequality joins will still need joins to update the view.
+
+\todo{Should I do some connection between DBToaster and PotionDB? In PotionDB we do incremental view maintenance too, but ad-hoc.}
+
+%ChronoCache	%Geo-distributed cache
+%TxCache	%Cache with materialized views and transactional consistency
+%DBToaster	%Materialized views, OLAP queries, TPC-H
+%DBProxy %Maybe, I didn't refer to this one at all in the rest of the document.
+
+
+%\section{Thoughts}
+%
+%So here it is basically a very extended state of the art (similar to how I did in my master's? A bit smaller though)
+%Which topics do I want to touch about here?
+%\begin{itemize}
+%	\item CAP
+%	\item Consistency levels (probably a lot to cover here - from weak to strong, multiple types of weak, causality between objects/same object, etc.)
+%	\item CRDTs
+%	\item Antidote.
+%	\item Partial replication
+%	\item Non-Uniform replication
+%	\item Geo replication
+%	\item State partition???
+%	\item Views/indexes. Namely materialized views.
+%	\item Maybe typical database queries/operations (limit, sort by, etc.)? Has some relevance as we aim to provide views with CRDTs.
+%	\item Other similar solutions (ChronoCache, etc. Check the paper). Must definitely mention things like Noria and predictive treaties.
+%\end{itemize}
+%
+%What about subsections?
+%\begin{itemize}
+%	\item Replication
+%	\item Consistency (can probably include CAP and state partition?)
+%	\item Other solutions?
+%\end{itemize}
+%
+%For consistency, I can check Albert's PHD plan for references. Same for conflict resolution techniques in CRDTs.
+%Check our paper and my master's thesis for more topics/references too.
+%
+%Note: On research statement, I can talk about TPC-H, and even give an example on how to transform a TPC-H query into CRDTs.
+%%\chapter{NOVAthesis Template \emph{User's Manual}}
+%%\label{cha:users_manual}
+%
+%This phrase from the grant documents can be useful:
+%''In this work we propose to design a novel replication model levering on the advantages of both partial and non-uniform replication. We will also conduct research on integrating multiple consistency models in our proposal, which is challenging due to transactions spanning multiple partitions and materialized views referring to multiple partitions. We will also implement our model in a database prototype.´´
+%
+%To talk about how difficult/novel the problem is, mention that: - we combine partial + uniform replication (novel) in a geo-distributed scenario + has to handle consistency for transactions spanning multiple partitions, ensuring both partially replicated objects and materialized views stay updated and correct.
+%
+%Check the FCT grant docs for objectives/contributions too (dynamic partition (add/remove replicas on the fly), stronger consistency models are particularly interesting to mention.)
+%
+%May be worth mentioning my Master's work (and the published paper) - if needed, I have the knowledge and experience to design new CRDTs, and also understanding of consistency levels.

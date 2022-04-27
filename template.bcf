@@ -2397,6 +2397,7 @@
     <bcf:citekey order="29">spanner</bcf:citekey>
     <bcf:citekey order="30">cops</bcf:citekey>
     <bcf:citekey order="31">dynamo</bcf:citekey>
+    <bcf:citekey order="31">cure</bcf:citekey>
     <bcf:citekey order="32">spanner</bcf:citekey>
     <bcf:citekey order="33">slog</bcf:citekey>
     <bcf:citekey order="34">dynamo</bcf:citekey>
@@ -2537,6 +2538,14 @@
     <bcf:citekey order="87">mdcc</bcf:citekey>
     <bcf:citekey order="88">slog</bcf:citekey>
     <bcf:citekey order="89">dynamo</bcf:citekey>
+    <bcf:citekey order="90">cops</bcf:citekey>
+    <bcf:citekey order="91">eiger</bcf:citekey>
+    <bcf:citekey order="92">cure</bcf:citekey>
+    <bcf:citekey order="93">walter</bcf:citekey>
+    <bcf:citekey order="94">noria</bcf:citekey>
+    <bcf:citekey order="95">chronocache</bcf:citekey>
+    <bcf:citekey order="96">txcache</bcf:citekey>
+    <bcf:citekey order="97">dbtoaster</bcf:citekey>
   </bcf:section>
   <!-- SECTION 1 -->
   <bcf:bibdata section="1">
