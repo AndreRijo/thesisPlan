@@ -21,88 +21,124 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{\chapternumberline {1}Introduction}{1}{chapter.1}%
 \defcounter {refsection}{0}\relax 
-\contentsline {chapter}{\chapternumberline {2}Research Context}{3}{chapter.2}%
+\contentsline {section}{\numberline {1.1}Motivation}{1}{section.1.1}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {2.1}CAP theorem}{3}{section.2.1}%
+\contentsline {section}{\numberline {1.2}Proposed solution}{2}{section.1.2}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {2.2}Consistency}{4}{section.2.2}%
+\contentsline {section}{\numberline {1.3}Expected contributions}{3}{section.1.3}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.2.1}Strong consistency}{4}{subsection.2.2.1}%
+\contentsline {section}{\numberline {1.4}Document organization}{4}{section.1.4}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.2.2}Weak consistency}{5}{subsection.2.2.2}%
+\contentsline {chapter}{\chapternumberline {2}Research Context}{5}{chapter.2}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.2.3}CRDTs and other conflict resolution techniques}{7}{subsection.2.2.3}%
+\contentsline {section}{\numberline {2.1}CAP theorem}{5}{section.2.1}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {2.3}Replication}{7}{section.2.3}%
+\contentsline {section}{\numberline {2.2}Consistency}{6}{section.2.2}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.3.1}Synchronous and asynchronous replication}{8}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.2.1}Strong consistency}{6}{subsection.2.2.1}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.3.2}Operation and state based replication}{9}{subsection.2.3.2}%
+\contentsline {subsection}{\numberline {2.2.2}Weak consistency}{7}{subsection.2.2.2}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{State-based \cite {crdt}.}{9}{section*.28}%
+\contentsline {subsection}{\numberline {2.2.3}CRDTs and other conflict resolution techniques}{9}{subsection.2.2.3}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Operation-based \cite {crdt}.}{9}{section*.29}%
+\contentsline {section}{\numberline {2.3}Replication}{9}{section.2.3}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{CRDTs \cite {crdt}.}{9}{section*.30}%
+\contentsline {subsection}{\numberline {2.3.1}Synchronous and asynchronous replication}{10}{subsection.2.3.1}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Shortcomings and optimizations.}{10}{section*.31}%
+\contentsline {subsection}{\numberline {2.3.2}Operation and state based replication}{11}{subsection.2.3.2}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.3.3}Partial replication}{10}{subsection.2.3.3}%
+\contentsline {paragraph}{State-based \cite {crdt}.}{11}{section*.29}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Internal partitioning.}{10}{section*.32}%
+\contentsline {paragraph}{Operation-based \cite {crdt}.}{11}{section*.30}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{External partitioning}{11}{section*.33}%
+\contentsline {paragraph}{CRDTs \cite {crdt}.}{11}{section*.31}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.3.4}Geo replication}{11}{subsection.2.3.4}%
+\contentsline {paragraph}{Shortcomings and optimizations.}{12}{section*.32}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.3.5}Non-uniform replication}{13}{subsection.2.3.5}%
+\contentsline {subsection}{\numberline {2.3.3}Partial replication}{12}{subsection.2.3.3}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {2.4}Data access}{14}{section.2.4}%
+\contentsline {paragraph}{Internal partitioning.}{12}{section*.33}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Key-value stores.}{14}{section*.40}%
+\contentsline {paragraph}{External partitioning}{13}{section*.34}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Relational databases.}{14}{section*.41}%
+\contentsline {subsection}{\numberline {2.3.4}Geo replication}{13}{subsection.2.3.4}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.4.1}Queries}{15}{subsection.2.4.1}%
+\contentsline {subsection}{\numberline {2.3.5}Non-uniform replication}{15}{subsection.2.3.5}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.4.2}Speeding up queries - views and indexes}{16}{subsection.2.4.2}%
+\contentsline {section}{\numberline {2.4}Data access}{16}{section.2.4}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Indexes.}{16}{section*.44}%
+\contentsline {paragraph}{Key-value stores.}{16}{section*.41}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Views.}{16}{section*.45}%
+\contentsline {paragraph}{Relational databases.}{16}{section*.42}%
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {2.4.3}Existing systems}{17}{subsection.2.4.3}%
+\contentsline {subsection}{\numberline {2.4.1}Queries}{17}{subsection.2.4.1}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Spanner.}{17}{section*.50}%
+\contentsline {subsection}{\numberline {2.4.2}Speeding up queries - views and indexes}{18}{subsection.2.4.2}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{MDCC.}{18}{section*.51}%
+\contentsline {paragraph}{Indexes.}{18}{section*.45}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{SLOG.}{18}{section*.52}%
+\contentsline {paragraph}{Views.}{18}{section*.46}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Dynamo.}{18}{section*.53}%
+\contentsline {subsection}{\numberline {2.4.3}Existing systems}{19}{subsection.2.4.3}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{COPS.}{19}{section*.54}%
+\contentsline {paragraph}{Spanner.}{19}{section*.51}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Cure.}{19}{section*.56}%
+\contentsline {paragraph}{MDCC.}{19}{section*.52}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Walter.}{20}{section*.58}%
+\contentsline {paragraph}{SLOG.}{20}{section*.53}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Noria.}{20}{section*.59}%
+\contentsline {paragraph}{Dynamo.}{20}{section*.54}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{ChronoCache.}{20}{section*.60}%
+\contentsline {paragraph}{COPS.}{21}{section*.55}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{TxCache.}{21}{section*.61}%
+\contentsline {paragraph}{Cure.}{21}{section*.57}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{DBToaster.}{21}{section*.62}%
+\contentsline {paragraph}{Walter.}{21}{section*.59}%
 \defcounter {refsection}{0}\relax 
-\contentsline {chapter}{Bibliography}{23}{section*.65}%
+\contentsline {paragraph}{Noria.}{22}{section*.60}%
+\defcounter {refsection}{0}\relax 
+\contentsline {paragraph}{ChronoCache.}{22}{section*.61}%
+\defcounter {refsection}{0}\relax 
+\contentsline {paragraph}{TxCache.}{23}{section*.62}%
+\defcounter {refsection}{0}\relax 
+\contentsline {paragraph}{DBToaster.}{23}{section*.63}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{\chapternumberline {3}Research Statement}{25}{chapter.3}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.1}Design choices and motivation}{27}{section.3.1}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.2}Replication model}{28}{section.3.2}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.3}Views}{30}{section.3.3}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.4}Version Management}{31}{section.3.4}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.5}PotionDB structure}{32}{section.3.5}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.6}Evaluation of PotionDB}{33}{section.3.6}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.7}Contributions}{34}{section.3.7}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.8}Next steps}{35}{section.3.8}%
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.8.1}Version Management}{35}{subsection.3.8.1}%
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.8.2}Consistency levels and invariants}{36}{subsection.3.8.2}%
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.8.3}Dynamic partitioning}{37}{subsection.3.8.3}%
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.8.4}Improvements on view maintenance}{37}{subsection.3.8.4}%
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3.9}Expected contributions}{38}{section.3.9}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{Bibliography}{40}{section*.82}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{Appendices}{}{}
 \defcounter {refsection}{0}\relax 
-\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{28}{appendix.A}%
+\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{45}{appendix.A}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{Annexes}{}{}
 \defcounter {refsection}{0}\relax 
-\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{29}{annex.A}%
+\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{46}{annex.A}%
 \babel@toc {english}{}
 \babel@toc {english}{}

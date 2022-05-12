@@ -11,25 +11,147 @@
 \chapter{Introduction}
 \label{cha:introduction}
 
-\textbf{DISCLAIMER - THE PARAGRAPH BELOW IS ``RANDOM TEXT'' - I came up with it while writing the section of geo replication. I leave it here as it may be useful for either the Introduction or Research Statement chapters.}
+\todo{Is the Introduction in general okay like this? Or does it motivate a too generic problem, instead of focusing on the main problem (recurring, analytic queries, views)?}
 
-In PotionDB, the main goal is to be able to provide mechanisms allowing quick reply of demanding but recurring queries that concern large amounts of data.
-For example, in a worldwide e-commerce system, obtaining the ``top 10 sold products worldwide'' is a challenging query, as this requires knowing the amount of sales of all products.
-For such a system, it is ideal for it to be geo-distributed (to ensure low latency to all clients) and partially replicated (it is undesirable for e.g. data of all clients, sales and local stocks to be replicated everywhere).
-Under this scenario, replying to the aforementioned query is very difficult, as no server has all the required data.
-Strong consistency is also not desirable, as this query would involve all data-centers, which could make a transaction for this query take a long time and possibly abort multiple times.
-Thus, in PotionDB, we propose to provide materialized views under a partially geo-replicated database, providing causal consistency.
-More precisely, we aim to provide materialized views with a global view of the data, without requiring all data necessary for the view to be replicated in one place.
-Queries targeted at those views must also be able to complete by executing locally in any of the servers replicating said view.
+%Albert gives some context (applications, client-server communication, its issues, etc.) Then motivation. Then proposed approach, including challenges to overcome. Finally, contributions and organization of the document.
 
-\textbf{Notes from here below}
-	
-	`The Introduction should include a short summary of the major issues be- hind the proposed research, and provide the context of those issues within a broader background (not only in academic, but also in industrial and social terms, if possible). It may already provide a glimpse of the problems and challenges you intend to solve and the kind of results you expect to obtain, in general terms. After reading the Introduction, anyone should get an intuitive grasp of what the research issues are and why they are relevant.''
+%Vale gives some context, exposes the problem and says what will the plan propose to do. Finally ends with the organization of the document.
 
-- Motivate the research topic
+%Bernardo has the sections of Introduction, motivation & context, proposed solution and contributions, organization.
 
-- What are the challenges/issues we are trying to solve? Provide a broad context (academic, industrial, social)
+%"The Introduction should include a short summary of the major issues behind the proposed research, and provide the context of those issues within a broader background (not only in academic, but also in industrial and social terms, if possible). It may already provide a glimpse of the problems and challenges you intend to solve and the kind of results you expect to obtain, in general terms. After reading the Introduction, anyone should get an intuitive grasp of what the research issues are and why they are relevant."
 
-- Can provide a glimpse of problems and challenges that are intended to be solved; also possible expected results, in general terms
+Nowadays, new services and applications appear everyday on the Internet.
+Billions of devices are connected to the Internet, with some large scale applications having millions of daily users.
+Applications such as Spotify, Netflix, Twitter, Amazon, Youtube, among many others operate on a scale not imaginable years ago.
+Large-scale applications have several implications.
+First, multiple data-centers are needed to support them, with even more individual servers.
+Second, services are expected to be available 24/7, despite failures happening frequently.
+Third, users expect the services to be fast, and in some cases even a small increase to latency may imply considerable economic losses to service providers \cite{???}.
 
-- The idea is that after reading the Introduction, anyone should know what are the research issues/challenges and why they are relevant
+It is thus essential to develop systems which are fast, scalable and fault tolerant.
+Those systems should also be easy to use, in order to allow feature-rich applications to be developed upon easily.
+Data should be consistent at all time, both to ease application development and to avoid users observing abnormal situations.
+For example, consider an user of an e-commerce application.
+The user adds a product to the cart and observes that there is many units in stock.
+However, due to an inconsistency, when the user goes to the checkout, the product may not be in the cart or is shown as ``out of stock''.
+This may lead the user to give up on the sale in frustration, possibly resorting to the service of another company, resulting in the loss of a customer.
+Situations like this can happen due to the distributed nature of the services and must be avoided whenever possible.
+
+\section{Motivation}
+Unfortunately, situations as the one described above can happen, where users may observe anomalies in system behaviour.
+This happens as many systems trade off data consistency for performance and fault tolerance.
+The reason for this trade off is due to the impossibility result of the CAP theorem \cite{cap}, which states that between the three ideal properties of:
+\begin{enumerate*}[label=(\roman*)]
+	\item strongly consistent data;
+	\item being always available;
+	\item tolerance to network failures;
+\end{enumerate*}
+only two of them can be provided simultaneously.
+Thus, while some systems cannot sacrifice strongly consistent data (e.g., banking) and as such may be unavailable at times, many others prefer to sacrifice data consistency in favour of availability.
+
+The trade off above mentioned is further exacerbated when we consider many services nowadays are provided at a global scale.
+In order to ensure low latency, datacenters are spread across the globe.
+However, to keep data strongly consistent, coordination among faraway datacenters is required, which slows down user's actions.
+For many services, this is unacceptable.
+Thus, much research is done on providing solutions for systems providing weak consistency \cite{???} - a level of consistency that is compatible with system availability and low latency.
+
+Despite the existence of solutions providing weak consistency, many of those have considerable usability issues.
+The datatypes provided are often limited and many consistency issues may arise, making application development difficult.
+Furthermore, often data is replicated everywhere, increasing costs considerably as the number of datacenters increases, specially for systems deployed in the cloud.
+On the other hand, many datacenters are needed, in order for the system to scale and provide low latency for users anywhere in the user.
+A solution is to choose carefully where each subset of data should be replicated on.
+
+The limitations mentioned above lead to another actual, and quite relevant, issue.
+Many services require quick statistics or data analysis of their data.
+This can be crucial to make essential business decisions, some of them only relevant if done quickly.
+For example, a product that becomes suddenly popular (e.g., due to some famous person using it), must be quickly identified to ensure the stocks do not run out.
+This requires to quickly be able to access, summarize and process data that may be potentially spread across the world.
+These ``analytic queries'' \cite{???} are usually not supported by systems with weak consistency, which have limited interfaces and lack mechanisms to identify and gather the necessary data.
+Even in strongly consistent systems, if the system is not designed specifically for those kind of queries, it may take a long time to execute those queries and slow down or even block other activities, which is undesirable.
+
+\section{Proposed solution}
+
+In our work, we aim to provide a solution for geo-distributed systems in which low latency is essential, while still providing a useful set of features and guarantees.
+Due to this requirement, our solution is set in the ``world'' of weakly consistent solutions.
+More precisely, in our work we aim to provide the algorithms and methods required to provide a fully functional database that is adequate for a geo-distributed scenario where performance and low latency are crucial.
+We also will provide an implementation and evaluation of said algorithms and database.
+In general terms, we plan to address the aforementioned issues as follows.
+
+To tackle the limited interface of weak consistent systems and ease application development, we will implement many data types appropriate for widely distributed systems, as well as design some new ones.
+We will also provide support for read-write, interactive, transactions.
+These kind of transactions are widely considered useful yet are only common in strongly consistent systems, as their implementation under weak consistency is challenging.
+
+Another form by which we aim to improve user experience and application development is through strengthening consistency guarantees.
+Our solution will provide causal consistency \cite{???}, a form of weak consistency which prevents some concurrency anomalities from occurring.
+We also aim to provide other forms of consistency, in order for applications to be able to do trade offs between performance and consistency guarantees.
+We intend to support transactions with different consistency levels happening in parallel, as even the same application may have different consistency/latency needs depending on the type of operation.
+
+Furthermore, we intend to support invariants, as it is crucial for the correct working of some applications.
+For example, on an e-commerce application, if two users concurrently try to buy the last unit of a product, only one must succeed.
+Invariants can help ensure this by, e.g., defining an invariant which states the stock is non-negative.
+
+Finally, and one of the main goals of this work, is to provide a solution to analytic, recurring queries in weakly consistent systems.
+In fact, our solution aims to serve those queries, which may span millions of data items spread across many servers, in near realtime, as if they were ``normal'' queries.
+For this goal, we will develop algorithms to provide support for materialized views, which will provide the necessary information to answer said queries instantly.
+The main challenges with providing materialized views consists in keeping views and their referred items consistent, even under weak consistency, while allowing views to refer to data that may be spread across multiple partitions in different servers.
+Another relevant challenge consists in defining appropriate datatypes to efficiently provide the necessary summaries/representations of data for the views.
+
+\section{Expected contributions}
+
+Some of the previously mentioned goals have already been achieved, while others are in progress or future steps to take in our work.
+At the end of this work, we expect the following main contributions, which will be further developed in Chapter 3:
+
+\begin{itemize}
+	\item Design and implementation of algorithms for efficient geo distributed replication, combining partial and non-uniform replication to reduce network, storage and processing costs;
+	\item Design and implementation of a transaction algorithm supporting multiple consistency levels;
+	\item A solution for analytic queries spanning high amounts of data though the usage of materialized views.
+	Views may span data partitioned across many servers/datacenters.
+	Views must also stay consistent and up-to-date despite the lack of strong consistency;
+	\item Provision of useful correctness guarantees to application developers, both through employment of useful consistency models and invariants (the latter is quite challenging under weak consistency);
+	\item A database implementation which provides useful and varied datatypes well suited for both applications and geo distribution.
+	The database will also support the algorithms developed in this work and serve as means of evaluating their performance.
+\end{itemize}
+
+\section{Document organization}
+
+The rest of this document is organized as follows.
+First, Chapter \ref{cha:research_context} covers and analyses the state-of-the-art in relevant fields.
+Afterwards, Chapter \ref{cha:research_statement} discusses in detail the challenges and goals of this work, covering both challenges/goals already addressed and future work.
+Finally, Chapter \ref{cha:work_plan} outlines the plan for the remaining time of this PhD, namely the timeline for each of the remaining goals.
+
+
+
+
+%- Motivate the research topic
+%- What are the challenges/issues we are trying to solve? Provide a broad context (academic, industrial, social)
+%- Can provide a glimpse of problems and challenges that are intended to be solved; also possible expected results, in general terms
+%- The idea is that after reading the Introduction, anyone should know what are the research issues/challenges and why they are relevant
+
+%Start with some generic topic
+%Motivate the problem - problems of existing solutions? Strong consistency, geo-replication, etc.
+%Mention weak consistency and then mention views/analytic queries
+%Maybe mention some other solutions for the analytic queries problems and their shortcomings (check paper)
+%Mention our approach
+%Mention the issues to solve
+	%May want to include mentioning invariants/different consistency levels to really make the system ``usable''
+%Mention challenges and contributions? Mix both existing ones and upcoming ones. If needed, explain that on later sections it will be clear which ones are already achieved and which ones are yet to be achieved.
+%Organization
+
+
+
+
+
+
+
+%\textbf{DISCLAIMER - THE PARAGRAPH BELOW IS ``RANDOM TEXT'' - I came up with it while writing the section of geo replication. I leave it here as it may be useful for either the Introduction or Research Statement chapters.}
+%
+%In PotionDB, the main goal is to be able to provide mechanisms allowing quick reply of demanding but recurring queries that concern large amounts of data.
+%For example, in a worldwide e-commerce system, obtaining the ``top 10 sold products worldwide'' is a challenging query, as this requires knowing the amount of sales of all products.
+%For such a system, it is ideal for it to be geo-distributed (to ensure low latency to all clients) and partially replicated (it is undesirable for e.g. data of all clients, sales and local stocks to be replicated everywhere).
+%Under this scenario, replying to the aforementioned query is very difficult, as no server has all the required data.
+%Strong consistency is also not desirable, as this query would involve all data-centers, which could make a transaction for this query take a long time and possibly abort multiple times.
+%Thus, in PotionDB, we propose to provide materialized views under a partially geo-replicated database, providing causal consistency.
+%More precisely, we aim to provide materialized views with a global view of the data, without requiring all data necessary for the view to be replicated in one place.
+%Queries targeted at those views must also be able to complete by executing locally in any of the servers replicating said view.
+

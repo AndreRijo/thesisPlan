@@ -9,6 +9,7 @@
 \typeout{NT FILE chapter2.tex}%
 
 \chapter{Research Context}
+\label{cha:research_context}
 
 \todo{Is an Introduction like this okay? Or is just mentioning what will be discussed in this chapter enough?}
 
@@ -60,6 +61,7 @@ In the literature, a plethora of consistency models have been specified \cite{li
 Despite the variety of models, they can be grouped as either being a form of \emph{Strong Consistency} or \emph{Weak Consistency}.
 
 \subsection{Strong consistency}
+\label{subsec:strong}
 
 In models providing strong consistency, all clients observe the same state of the system independently of the replica contacted by the client(s).
 In order to achieve this, it is necessary to totally order all write operations executed in the system, which requires coordination among the different replicas \cite{linearizability, spanner}.
@@ -74,6 +76,7 @@ Due to the requirement of a total order, it also tends to be difficult to scale 
 Multiple models implementing strong consistency have been proposed in the literature  \cite{linearizability, si}: serializability, linearizability and snapshot isolation to name a few.
 
 \subsection{Weak consistency}
+\label{subsec:weak}
 
 Models providing weak consistency are considerably more relaxed in terms of requirements compared to strong consistency \cite{understandingEC}.
 As such, they also provide weaker guarantees, making them harder to reason about and build applications on.
@@ -137,6 +140,7 @@ To accommodate use cases in which higher throughput is desirable and causality i
 We note that even in this scenario, the client always reads state left by some commited transaction, i.e., there is no interferance  from ongoing transactions.
 
 \subsection{CRDTs and other conflict resolution techniques}
+\label{subsec:crdt}
 
 %CRDTs/operational transformation
 Both with eventual and causal consistency, concurrent updates on the same objects can occur and lead to conflicts \cite{understandingEC}.
@@ -172,6 +176,7 @@ Factors like consistency model, fault model of the system, geo-distribution of t
 As will be seen in this section, in PotionDB we combine ideas from multiple concepts of replication to provide a novel replication model that is well suited for PotionDB's use case.
 
 \subsection{Synchronous and asynchronous replication}
+\label{subsec:syncAsync}
 
 \todo{Please check this section carefully... I don't feel very secure about what I say in this section. Suggestions are more than welcome.}
 
@@ -197,6 +202,7 @@ While asynchronous replication may lead to more fault-tolerant systems \cite{dyn
 \todo{Either here or in Research Context I should mention we make usage of async replication and explain why (avoid latency increase from geo-replication; better fault tolerance; sync not needed for our use-case)}
 
 \subsection{Operation and state based replication}
+\label{subsec:operationStateReplication}
 
 Replicas can be kept up-to-date in different forms.
 One important decision is on how to propagate changes to the state.
@@ -237,6 +243,7 @@ For states, it is possible to calculate differences of states (delta) and send t
 This solution has been studied in the literature \cite{deltaAlmeida, deltaVan}, with CRDTs based on deltas being known as delta-CRDTs. Delta-CRDTs present considerable reductions on the message size compared to state-based CRDTs, but also have complex specifications \cite{deltaAlmeida}. Also, keeping replicas correctly up-to-date is more challenging (namely in terms of causal consistency \cite{deltaAlmeida}).
 
 \subsection{Partial replication}
+\label{subsec:partial}
 
 Full replication is very popular in distributed storage systems \cite{sipre}. 
 It allows for potentially high fault tolerance, as data is stored everywhere so many servers can be unavailable and, depending on the consistency model, still have the data reachable or, at least, safely stored.
@@ -282,6 +289,7 @@ If there is no locality on data or some other criteria to externally partition d
 %Maybe list all (or some) papers that make use of partial replication
 
 \subsection{Geo replication}
+\label{subsec:geo}
 
 \todo{This introduction may not be needed depending on what I say on... the Introduction itself. Also when I did this introduction, geo replication's section was before partial replication... does this intro still make sense?}
 
@@ -320,6 +328,7 @@ The main challenge of PotionDB consists in providing consistent views that conce
 Provisioning of said views should only require interacting with a single server also, to ensure low latency.
 
 \subsection{Non-uniform replication}
+\label{subsec:nonuniform}
 
 The usage of partial replication can already reduce networking and storage costs, by reducing the amount of places each object is replicated on.
 However, it does not help with the case of popular objects that may have a big size or have a lot of updates.
@@ -405,6 +414,7 @@ On the other hand, relational databases have a richer interface, which eases app
 Some key-value stores provide extra features in order to facilitate application development by, e.g., providing many object types, extra operations, transactions \cite{cure, walter}.
 
 \subsection{Queries}
+\label{subsec:queries}
 
 %Key-value stores typically offer simple interfaces, often gets and puts of data blobs. %Need a citation for this. Check some paper that claims this is not rich enough.
 %However, this makes application development more difficult, as relationships between objects and their correctness have to be maintained by the application logic.
@@ -445,6 +455,7 @@ Support for operations such as the ones referred before are already provided, an
 %Can't find anything in the existing papers. Will have to search some other way. I did find at least a few systems supporting materialized views.
 
 \subsection{Speeding up queries - views and indexes}
+\label{subsec:views}
 
 In order to provide applications with easier and quicker access to data, mechanisms have been studied to complement direct data access \cite{noria, dbtoaster, pequod, txcache, viewSelection, optIncMaintenance, effMaintenance, lazyMaintenance, genIndex, partIndex, dbproxy}. 
 Some of those mechanisms include usage of key-value stores as caches, indexes, views, data streaming, etc.
@@ -484,6 +495,7 @@ Finally, our views must also be kept up-to-date and provide causal consistency.
  \todo{Not sure if this part of ``without executing complex computations'' is clear.}
 
 \subsection{Existing systems}
+\label{subsec:existingSystems}
 
 \todo{Suggestions for a better title? Also does this need some sort of introduction?}
 
