@@ -23,11 +23,9 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {1.1}Motivation}{1}{section.1.1}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {1.2}Proposed solution}{2}{section.1.2}%
+\contentsline {section}{\numberline {1.2}Proposed solution}{3}{section.1.2}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {1.3}Expected contributions}{3}{section.1.3}%
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {1.4}Document organization}{4}{section.1.4}%
+\contentsline {section}{\numberline {1.3}Document organization}{4}{section.1.3}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{\chapternumberline {2}Research Context}{5}{chapter.2}%
 \defcounter {refsection}{0}\relax 
@@ -47,19 +45,19 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {2.3.2}Operation and state based replication}{11}{subsection.2.3.2}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{State-based \cite {crdt}.}{11}{section*.29}%
+\contentsline {paragraph}{State-based \cite {crdt}.}{11}{section*.32}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Operation-based \cite {crdt}.}{11}{section*.30}%
+\contentsline {paragraph}{Operation-based \cite {crdt}.}{11}{section*.33}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{CRDTs \cite {crdt}.}{11}{section*.31}%
+\contentsline {paragraph}{CRDTs \cite {crdt}.}{11}{section*.34}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Shortcomings and optimizations.}{12}{section*.32}%
+\contentsline {paragraph}{Shortcomings and optimizations.}{12}{section*.35}%
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {2.3.3}Partial replication}{12}{subsection.2.3.3}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Internal partitioning.}{12}{section*.33}%
+\contentsline {paragraph}{Internal partitioning.}{12}{section*.36}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{External partitioning}{13}{section*.34}%
+\contentsline {paragraph}{External partitioning}{13}{section*.37}%
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {2.3.4}Geo replication}{13}{subsection.2.3.4}%
 \defcounter {refsection}{0}\relax 
@@ -67,41 +65,41 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {2.4}Data access}{16}{section.2.4}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Key-value stores.}{16}{section*.41}%
+\contentsline {paragraph}{Key-value stores.}{16}{section*.44}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Relational databases.}{16}{section*.42}%
+\contentsline {paragraph}{Relational databases.}{16}{section*.45}%
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {2.4.1}Queries}{17}{subsection.2.4.1}%
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {2.4.2}Speeding up queries - views and indexes}{18}{subsection.2.4.2}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Indexes.}{18}{section*.45}%
+\contentsline {paragraph}{Indexes.}{18}{section*.48}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Views.}{18}{section*.46}%
+\contentsline {paragraph}{Views.}{18}{section*.49}%
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {2.4.3}Existing systems}{19}{subsection.2.4.3}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Spanner.}{19}{section*.51}%
+\contentsline {paragraph}{Spanner.}{19}{section*.54}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{MDCC.}{19}{section*.52}%
+\contentsline {paragraph}{MDCC.}{20}{section*.55}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{SLOG.}{20}{section*.53}%
+\contentsline {paragraph}{SLOG.}{20}{section*.56}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Dynamo.}{20}{section*.54}%
+\contentsline {paragraph}{Dynamo.}{20}{section*.57}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{COPS.}{21}{section*.55}%
+\contentsline {paragraph}{COPS.}{21}{section*.58}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Cure.}{21}{section*.57}%
+\contentsline {paragraph}{Cure.}{21}{section*.60}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Walter.}{21}{section*.59}%
+\contentsline {paragraph}{Walter.}{22}{section*.62}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{Noria.}{22}{section*.60}%
+\contentsline {paragraph}{Noria.}{22}{section*.63}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{ChronoCache.}{22}{section*.61}%
+\contentsline {paragraph}{ChronoCache.}{22}{section*.64}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{TxCache.}{23}{section*.62}%
+\contentsline {paragraph}{TxCache.}{23}{section*.65}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{DBToaster.}{23}{section*.63}%
+\contentsline {paragraph}{DBToaster.}{23}{section*.66}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{\chapternumberline {3}Research Statement}{25}{chapter.3}%
 \defcounter {refsection}{0}\relax 
@@ -131,14 +129,16 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {3.9}Expected contributions}{38}{section.3.9}%
 \defcounter {refsection}{0}\relax 
-\contentsline {chapter}{Bibliography}{40}{section*.82}%
+\contentsline {chapter}{\chapternumberline {4}Work Plan}{40}{chapter.4}%
+\defcounter {refsection}{0}\relax 
+\contentsline {chapter}{Bibliography}{41}{section*.85}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{Appendices}{}{}
 \defcounter {refsection}{0}\relax 
-\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{45}{appendix.A}%
+\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{46}{appendix.A}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{Annexes}{}{}
 \defcounter {refsection}{0}\relax 
-\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{46}{annex.A}%
+\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{47}{annex.A}%
 \babel@toc {english}{}
 \babel@toc {english}{}
