@@ -1,0 +1,12 @@
+.DS_Store
+
+%Generated PDF
+template.pdf
+
+%Latex metadata files
+*.aux
+*.log
+*.synctex.gz
+*.bbl
+*.blg
+*.out
