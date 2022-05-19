@@ -103,42 +103,28 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{\chapternumberline {3}Research Statement}{25}{chapter.3}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {3.1}Design choices and motivation}{27}{section.3.1}%
+\contentsline {section}{\numberline {3.1}Recurring Queries and Views}{26}{section.3.1}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {3.2}Replication model}{28}{section.3.2}%
+\contentsline {section}{\numberline {3.2}Replication algorithms}{28}{section.3.2}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {3.3}Views}{30}{section.3.3}%
+\contentsline {section}{\numberline {3.3}Transactional algorithm}{29}{section.3.3}%
 \defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {3.4}Version Management}{31}{section.3.4}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {3.5}PotionDB structure}{32}{section.3.5}%
+\contentsline {section}{\numberline {3.5}Consistency levels}{32}{section.3.5}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {3.6}Evaluation of PotionDB}{33}{section.3.6}%
+\contentsline {section}{\numberline {3.6}Contributions}{33}{section.3.6}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {3.7}Contributions}{34}{section.3.7}%
+\contentsline {chapter}{\chapternumberline {4}Work Plan}{36}{chapter.4}%
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {3.8}Next steps}{35}{section.3.8}%
-\defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {3.8.1}Version Management}{35}{subsection.3.8.1}%
-\defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {3.8.2}Consistency levels and invariants}{36}{subsection.3.8.2}%
-\defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {3.8.3}Dynamic partitioning}{37}{subsection.3.8.3}%
-\defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {3.8.4}Improvements on view maintenance}{37}{subsection.3.8.4}%
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {3.9}Expected contributions}{38}{section.3.9}%
-\defcounter {refsection}{0}\relax 
-\contentsline {chapter}{\chapternumberline {4}Work Plan}{40}{chapter.4}%
-\defcounter {refsection}{0}\relax 
-\contentsline {chapter}{Bibliography}{41}{section*.85}%
+\contentsline {chapter}{Bibliography}{37}{section*.77}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{Appendices}{}{}
 \defcounter {refsection}{0}\relax 
-\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{46}{appendix.A}%
+\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{42}{appendix.A}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{Annexes}{}{}
 \defcounter {refsection}{0}\relax 
-\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{47}{annex.A}%
+\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{43}{annex.A}%
 \babel@toc {english}{}
 \babel@toc {english}{}
