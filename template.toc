@@ -117,14 +117,14 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{\chapternumberline {4}Work Plan}{36}{chapter.4}%
 \defcounter {refsection}{0}\relax 
-\contentsline {chapter}{Bibliography}{37}{section*.77}%
+\contentsline {chapter}{Bibliography}{38}{section*.82}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{Appendices}{}{}
 \defcounter {refsection}{0}\relax 
-\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{42}{appendix.A}%
+\contentsline {appendix}{\chapternumberline {A}\emph {NOVAthesis} covers showcase}{43}{appendix.A}%
 \defcounter {refsection}{0}\relax 
 \contentsline {chapter}{Annexes}{}{}
 \defcounter {refsection}{0}\relax 
-\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{43}{annex.A}%
+\contentsline {appendix}{\chapternumberline {I}Annex 1 Lorem Ipsum}{44}{annex.A}%
 \babel@toc {english}{}
 \babel@toc {english}{}

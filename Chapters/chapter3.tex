@@ -143,7 +143,7 @@ We incorporate partial replication in our algorithm by only replicating, to each
 We do so as follows.
 First, we assume objects (including views) are arranged into ``groups'', which we call \emph{buckets}.
 Each object can be assigned to one bucket, and each server can replicate one or more buckets.
-Each server must register which buckets they are interested in (e.g., by using a publish-subscribe service such as RabbitMQ \cite{???}).
+Each server must register which buckets they are interested in (e.g., by using a publish-subscribe service such as RabbitMQ \cite{rabbitmq}).
 When replicating a transaction, the transaction is split into parts - one for each bucket present in the transaction.
 Each part is sent to all replicas of the part's bucket.
 After all parts are sent, a message is sent to all involved servers signalling that the transaction is complete.
