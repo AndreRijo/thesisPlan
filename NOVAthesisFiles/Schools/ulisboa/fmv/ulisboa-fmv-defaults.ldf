@@ -1,4 +1,4 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% ulisboa/fmv/ulisboa-fmv-defaults.ldf
 %% NOVA thesis configuration file
 %%
@@ -8,28 +8,162 @@
 \typeout{NT FILE ulisboa/fmv/ulisboa-fmv-defaults.ldf}%
 
 
+\ntsetup{style/chapter=fmv}
+\ntsetup{lang/cover=pt}
+\ntsetup{print/secondcover=true}
+\ntsetup{numberallpages=true}
+\ifdocworking{}{\ntsetup{color/links=black}}
+\ifdocfinal{\ntsetup{print/statement=true}}{}
+
+\IfStrEq{\@LANG@MAIN}{en}{%
+  % \spinebkmstring(pt):=\spinebkmstring(en)
+  \abstractorder(en):={pt,pt-ext,en}
+  \bkmstring(abstract,pt-ext):={Resumo Alargado}
+}
+
+\setcounter{lofdepth}{2}
+\linespread{1.30}
+\captionnamefont{\fontsize{10}{10}\selectfont\bfseries}
+\captiontitlefont{\fontsize{10}{10}\selectfont\bfseries}
+\openany
+
+
 % --------------------------------------------------------
 % FMV-like required data/information
-\usepackage{indentfirst}
+\RequirePackage{indentfirst}
 \setlength{\parindent}{1.25cm}
-\ifdocfinal{\ntsetup{secondcover=true}}{}
 \definecolor{fmvyellow}{RGB}{253,241,81}
 \definecolor{lightyellow}{RGB}{254,254,230}
-\ntbibsetup{style=apa}
-\ntremovefromprintorder{frontmatter}{statement,copyright}
-\AtEndPreamble{\let\cite\parencite}
+\ntbibsetup{maxcitenames=2,minbibnames=10,maxbibnames=10,dashed=false,uniquelist=false,style=authoryear}
+
+\AtEndPreamble{
+  % \let\cite\parencite
+  \makeheadrule{novathesis@mainmatter}{0pt}{0pt}
+  \makeevenhead{novathesis@mainmatter}{}{}{}
+  \makeoddhead{novathesis@mainmatter}{}{}{}
+% }
+%
+%
+%
+% \NTAddToHook{NOVAthesisFiles/packages}{%
+  \RequirePackage{xpatch}
+% Remove commas between family and given names
+  \DeclareNameAlias{sortname}{family-given}
+  \renewrobustcmd*{\revsdnamepunct}{}
+  \renewrobustcmd*{\bibinitdelim}{}
+% Remove commas between family and given names
+  \renewrobustcmd*{\revsdnamepunct}{}
+  \renewrobustcmd*{\bibinitdelim}{}
+% Remove dot after initials
+  \renewrobustcmd*{\bibinitperiod}{}
+% Add dot after list of authors (and before year)
+  % \xpretobibmacro{date+extradate}{\setunit{\addperiod\space}}{}{}
+% Remove quotation marks from title
+  \DeclareFieldFormat*{title}{#1}
+% Remove emphasized from titles
+  \DeclareFieldFormat*{journaltitle}{#1\isdot}
+\DeclareFieldFormat{postnote}{#1}
+\DeclareFieldFormat{multipostnote}{#1}
+\renewcommand*{\bibpagespunct}{\addcolon}
+\renewcommand{\postnotedelim}{%
+  \iffieldpages{postnote}
+    {\addcolon\space}
+    {\addspace}}
+  % \DefineBibliographyStrings{english}{%
+  %   page             = {\ifbibliography{}{p\adddot}},
+  %   pages            = {\ifbibliography{}{pp\adddot}},
+  % }
+  \DefineBibliographyExtras{english}{%
+% Remove "and" before last author
+  \DeclareFieldFormat{pages}{#1}
+  \DeclareDelimFormat{finalnamedelim}{%
+    \ifnumgreater{\value{liststop}}{2}{%
+      \printdelim{multinamedelim}}{\addspace\bibstring{and}\space}}
+  }
+% Add dot after list of authors (and before year) and remove parentheses in date
+  \xpatchbibmacro{date+extradate}{%
+    \printtext[parens]%
+    }{%
+    \setunit*{\addperiod\space}%
+    \printtext%
+  }{}{}
+% Remove "in:" prefix in journal title
+  \renewbibmacro{in:}{}
+% Cite as "family initials"
+\DeclareNameFormat{labelname}{%
+  \ifcase\value{uniquename}%
+    \usebibmacro{name:family}
+      {\namepartfamily}
+      {\namepartgiven}
+      {\namepartprefix}
+      {\namepartsuffix}%
+  \or
+    \ifuseprefix
+      {\usebibmacro{name:family-given}
+        {\namepartfamily}
+        {\namepartgiveni}
+        {\namepartprefix}
+        {\namepartsuffixi}}
+      {\usebibmacro{name:family-given}
+        {\namepartfamily}
+        {\namepartgiveni}
+        {\namepartprefixi}
+        {\namepartsuffixi}}%
+  \or
+    \usebibmacro{name:family-given}
+      {\namepartfamily}
+      {\namepartgiven}
+      {\namepartprefix}
+      {\namepartsuffix}%
+  \fi
+  \usebibmacro{name:andothers}}
+% Increase spacing between bib entries
+  \setlength\bibitemsep{1.25\itemsep}
+}
 
 
-\newdata{doctype}
-\doctype(pt,phd):={Tese especialmente elaborada para obtenção do grau de Doutor em}
-\doctype(en,phd):={Thesis specially designed to earn the degree of Doctor in}
-\doctype(pt,msc):={Dissertação de Mestrado em}
-\doctype(en,msc):={Master Thesis in}
+\NTAddToHook{printbib/pre}{
+% Always remove "and" before last author
+  \DeclareDelimFormat{finalnamedelim}{%
+      \printdelim{multinamedelim}%
+  }%
+}
+
+
+
+\NTAddToHook{printbib/pre}{\begin{SingleSpacing}}
+\NTAddToHook{printbib/post}{\end{SingleSpacing}}
+
+\printorder(frontmatter,final):={%
+  statement;
+  dedicatory;      % (*) Print the dedicatory
+  acknowledgements;% (*) Print the acknowledgments
+  quote;           % (*) Print the quote
+  abstracts;       % Print abstracts in multiple languages.
+  alllistof;       % Print all the listof defined in “6_list_of.tex”
+  % printglossaries; % Print the Glossary, Acronyms, Symbols, etc…
+}
+
+\printorder(frontmatter,provisional):={%
+  dedicatory;      % (*) Print the dedicatory
+  acknowledgements;% (*) Print the acknowledgments
+  quote;           % (*) Print the quote
+  abstracts;       % Print abstracts in multiple languages.
+  alllistof;       % Print all the listof defined in “6_list_of.tex”
+  % printglossaries; % Print the Glossary, Acronyms, Symbols, etc…
+}
+
+
+\newdata{doctypestr}
+\doctypestr(pt,phd):={Tese especialmente elaborada para obtenção do grau de Doutor em}
+\doctypestr(en,phd):={Thesis specially designed to earn the degree of Doctor in}
+\doctypestr(pt,msc):={Dissertação de Mestrado em}
+\doctypestr(en,msc):={Master Thesis in}
 
 
 % --------------------------------------------------------
-\specializationstring(pt):={na especialidade de}
-\specializationstring(en):={with specialization in}
+\specializationstring(pt):={, na especialidade de}
+\specializationstring(en):={, with specialization in}
 
 % Faculty / School
 \school(pt):={Faculdade de Medicina Veterinária}
@@ -37,9 +171,22 @@
 \school(fr):={Faculty of Veterinary Medicine}
 \school(it):={Faculty of Veterinary Medicine}
 
+\@for\myi:={a,1,m,en},{a,1,f,en},{a,2,m,en},{a,2,f,en},{c,1,m,en},{c,1,f,en},{c,2,m,en},{c,2,f,en},{ca,1,m,en},{ca,1,f,en},{ca,2,m,en},{ca,2,f,en},{t,1,m,en},{t,1,f,en},{t,2,m,en},{t,2,f,en},{a,1,m,pt},{a,1,f,pt},{a,2,m,pt},{a,2,f,pt},{c,1,m,pt},{c,1,f,pt},{c,2,m,pt},{c,2,f,pt},{ca,1,m,pt},{ca,1,f,pt},{ca,2,m,pt},{ca,2,f,pt},{t,1,m,pt},{t,1,f,pt},{t,2,m,pt},{t,2,f,pt}\do{%
+  \adviserstring(\myi):={{\THEadviserstring(\myi)}}
+}
+
+\@for\myi:={c,r,a,ca,m,g}\do{%
+  \@for\myj:={1,2}\do{%
+    \@for\myk:={m,f}\do{%
+      \@for\myl:={en,pt}\do{%
+        \committeestring(\myi,\myj,\myk,\myl):={\THEcommitteestring(\myi,\myj,\myk,\myl)}%
+      }%
+    }%
+  }%
+}
 
 % Comiittee printing order
-\committeeorder():={c,r,a,m}% 
+\committeeorder():={c,m}%
 
 % Cover background images
 % \thesiscover(phd,1-1,bgcolor):={lightyellow}%LemonChiffon,lightyellow
@@ -47,13 +194,13 @@
 % \thesiscover(msc,1-1,bgcolor):={lightyellow}%LemonChiffon,lightyellow
 % \thesiscover(msc,N-2,bgcolor):={lightyellow}%LemonChiffon,lightyellow
 % \thesiscover(spine,bgcolor):={lightyellow}%LemonChiffon,lightyellow
-% \thesiscover(phd,1-1,image):={final_1}
-% \thesiscover(phd,final,2-1,image):={final_1}
-% \thesiscover(phd,provisional,1-1,image):={provisional_1}
+% \thesiscover(phd,1-1,image):={phd-provisional}
+% \thesiscover(phd,2-1,image):={phd2}
+% \thesiscover(phd,provisional,1-1,image):={phd-provisional}
 % \thesiscover(phd,provisional,2-1,image):={provisional_1}
-% \thesiscover(msc,final,1-1,image):={cover}
-% \thesiscover(msc,final,2-1,image):={final_1}
-% \thesiscover(msc,provisional,1-1,image):={provisional_1}
+% \thesiscover(msc,1-1,image):={msc1}
+% \thesiscover(msc,2-1,image):={msc2}
+% \thesiscover(msc,provisional,1-1,image):={msc-provisional}
 % \thesiscover(msc,provisional,2-1,image):={provisional_1}
 % \thesiscover(phd,front,image):={}
 % \thesiscover(phdplan,front,image):={}
@@ -63,40 +210,41 @@
 % \thesiscover(bsc,front,image):={}
 % \thesiscover(plain,front,image):={}
 
+
+
 % Spine info
 \spine(logo)={ulisboa-fmv-insignia-color}
-\spine(author)={\thedocauthor(name,short)}
-\spine(title)={\thedoctitle(\option{/novathesis/coverlang},main)}
-\spine(year)={\thentdocdate(year)}
-\spine(text,angle)={-90}
+% \spine(author)={\thedocauthor(name,short)}
+% \spine(title)={\thedoctitle(\@LANG@MAIN,main)}
+% \spine(year)={\thentdocdate(year)}
+\spine(angle)={180}
 
-\spine(box,author,top)={2.0cm}
+\spine (box, spacing)={0.5cm}
+
 \spine(box,author,len)={4.0cm}
 
-\spine(box,title,top)={\thespine(box,author,top)+\thespine(box,author,len)+\thespine(box,spacing)}
-\spine(box,title,len)={16.7cm}
+\spine(box,title,len)={18.9cm}
 
-\spine(box,logo,top)={\thespine(box,title,top)+\thespine(box,title,len)+\thespine(box,spacing)}
-\spine(box,logo,len)={2.1cm}
+\spine(box,logo,len)={1.5cm}
+\spine(box,logo,angle)={90}
 \spine(box,logo,align)={c}
 
-\spine(box,date,top)={\thespine(box,logo,top)+\thespine(box,logo,len)+\thespine(box,spacing)}
-\spine(box,date,len)={2.0cm}
+\spine(box,date,len)={2.0cm}%29,7cm
 
 
 % Set margins for "normal" pages
 \margin(screen,top):={2.5cm}
 \margin(screen,bottom):={2.5cm}
-\margin(screen,left):={3.0cm}
-\margin(screen,right):={3.0cm}
-\margin(paper,top):={3.5cm}
+\margin(screen,left):={2.5cm}
+\margin(screen,right):={2.5cm}
+\margin(paper,top):={2.5cm}
 \margin(paper,bottom):={2.5cm}
 \margin(paper,left):={2.5cm}
-\margin(paper,right):={3.5cm}
+\margin(paper,right):={2.5cm}
 
 %% Set margins for cover pages
 \margin(cover,top):={2.5cm}
-\margin(cover,bottom):={1.5cm}
+\margin(cover,bottom):={2.5cm}
 \margin(cover,left):={2.5cm}
 \margin(cover,right):={2.5cm}
 
@@ -137,23 +285,30 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Temporary macro to use in conditional expressions;
-\AtEndPreamble{% 
+\AtEndPreamble{%
   \LoadHelveticaLikeFont%
+  \renewcommand\familydefault{\sfdefault}%
+  \sffamily%
 }
 
-\NTAddToHook{cover/1-1/text/pre}{%
+\NTAddToHook{frontmatter/pre}{%
+  \renewcommand\familydefault{\sfdefault}%
   \sffamily%
 }
-\NTAddToHook{cover/2-1/text/pre}{%
-  \sffamily%
-}
+
+\NTAddToHook{cover/1-1/text/pre}{\sffamily}
+
+\NTAddToHook{cover/2-1/text/pre}{\sffamily}
+
+\NTAddToHook{ntquote/pre}{\vspace*{3cm}}
+
 \NTAddToHook{mainmatter/post}{%
   \counterwithout{figure}{chapter}%
   \counterwithout{table}{chapter}%
 }
 
 \ifdocfinal{}{
-  \AtEndPreamble{\usepackage[pagewise]{lineno}}
+  \AtEndPreamble{\RequirePackage[pagewise]{lineno}}
   \NTAddToHook{acknowledgements/pre}{\linenumbers}
   \NTAddToHook{acknowledgements/post}{\nolinenumbers}
   \NTAddToHook{abstract/pre}{\linenumbers}
@@ -163,107 +318,114 @@
   \NTAddToHook{cover/N-2/pre}{\nolinenumbers}
 }
 
-
-% School
-\ntaddtocover[height=2.5cm, inalign=c]{1-1,2-1}{%
-  \fontsize{12}{12}\selectfont%
-  \MakeUppercase{\theuniversity(\option{/novathesis/coverlang})}\\[4mm]%
-  \MakeUppercase{\theschool(\option{/novathesis/coverlang})}%
-} 
-
-% Logo
-\ntaddtocover[vspace=0.25cm, height=3cm, inalign=t]{1-1,2-1}{%
-  \includegraphics[height=1.6cm,align=c]{ulisboa-logo-lolor}%
-  \hspace{1.3cm}%
-  \includegraphics[height=2.5cm,align=c]{ulisboa-fmv-insignia-color}%
+\NTAddToHook{abstract/pre}{%
+  % \typeout{ABSTRACT/PRE/\@LSHORT}\aaa
+  \let\oldchapterheadstart=\chapterheadstart%
+  \preto{\chapterheadstart}%
+  {\begin{center}\noindent\Large\bfseries{\THEdoctitle(\@LSHORT,main)}\end{center}\bigskip}%
 }
 
-% PhD Title of Dissertation
-\ntaddtocover[vspace=2.6cm, height=2cm, inalign=t]{1-1,2-1}{%
+\NTAddToHook{abstract/post}{%
+  \let\chapterheadstart=\oldchapterheadstart%
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% COVER ELEMENTS
+% School
+\ntaddtocover[vspace=2mm, height=2.0cm, valign=c]{1-1}{%
   \fontsize{12}{12}\selectfont%
-  \textbf{\thedoctitle(\option{/novathesis/coverlang},main,cover,caps)}%
+  {\THEuniversity(\@LANG@COVER)}\\[4mm]%
+  {\THEschool(\@LANG@COVER)}%
+}
+\ntaddtocover[vspace=0mm, height=2.0cm, valign=t]{2-1}{%
+  \fontsize{12}{12}\selectfont%
+  {\THEuniversity(\@LANG@COVER)}\\[4mm]%
+  {\THEschool(\@LANG@COVER)}%
+}
+
+% Logo
+\ntaddtocover[vspace/msc=5mm, vspace/phd=0.25cm, height=2.95cm, valign=t]{1-1,2-1}{%
+  \includegraphics[height=1.6cm,align=c]{ulisboa-logo-color}%
+  \hspace{16mm}%
+  \includegraphics[height=2.5cm,align=c]{ulisboa-fmv-insignia-color}%
+  \hspace{2mm}
+}
+
+% Title of Dissertation
+\ntaddtocover[vspace/1-1=18mm, vspace/2-1=10mm, height=2.35cm, valign=c]{1-1,2-1}{%
+  \fontsize{12}{12}\selectfont%
+  \textbf{{\THEdoctitle(\@LANG@MAIN,main,cover)}}%
 }
 
 
 % Doc Status
-\ntaddtocover[vspace=0cm, height=1.3cm]{1-1,2-1}{%
+\ntaddtocover[vspace=0cm, height=1.5cm, valign=c]{1-1,2-1}{%
   \ifdocworking{Draft: \today}{}%
-  \ifdocprovisional{\emph{\theprovisionalstring(\option{/novathesis/coverlang})}}{}%
+  \ifdocprovisional{\emph{\theprovisionalstring(\@LANG@COVER)}}{}%
   \ifdocfinal{~}{}%
 }
 
 % Author name
-\ntaddtocover[vspace=0.0cm, height=1.0cm]{1-1,2-1}{%
+\ntaddtocover[vspace/1-1=0mm, vspace/2-1=4mm, height=1.8cm, valign=c]{1-1,2-1}{%
   \fontsize{12}{12}\selectfont%
-  \MakeTextUppercase{\thedocauthor(name)}%
+  {\THEdocauthor(name)}%
 }
 
 % Degree
 % In this position only if it is a phd doc;
-\ntaddtocover[vspace=1cm, height=0.5cm]{1-1,2-1}{%
-  \fontsize{12}{12}\selectfont%
-  \IfStrEq{\@covernumber}{2-1}{\thedoctype(\option{/novathesis/coverlang},\option{/novathesis/docdegree})
-                               \themajorfield(\option{/novathesis/coverlang})
-                               \ifphddoc{%
-                                 \ifdatadefined{specialization}(\option{/novathesis/coverlang})%
-                                           {\thespecializationstring(\option{/novathesis/coverlang})
-                                            \thespecialization(\option{/novathesis/coverlang})}{~}}%
-                                {~}%
-                               }{~}
+\ntaddtocover[vspace=21mm, height=0.5cm]{2-1}{%
+         \fontsize{12}{12}\selectfont%
+         {\THEdoctypestr(\@LANG@COVER,\option{/novathesis/doctype})}
+         {\THEmajorfield(\@LANG@COVER)}%
+         \ifphddoc{%
+           \ifdatadefined{specialization}(\@LANG@COVER)%
+                     {% \thebarheight(\@LANG@COVER)
+                      \THEspecialization(\@LANG@COVER)}{~}}%
+          {~}%
 }%
 
 
 % Committee and Advisers
-\ntaddtocover[vspace=2.0cm, align=l]{1-1,2-1}{%
+\ntaddtocover[vspace=15mm, height=45mm, valign=c, halign=l]{1-1,2-1}{%
   \fontsize{10}{10}\selectfont%
   \committeestringfont():={\bfseries}%
   % \advisertitlestringfont():={\bfseries}%
   \adviserstringfont():={\bfseries}%
   \begin{minipage}[t]{0.48\textwidth}
-    \IfStrEq{\@covernumber}{2-1}%
-      {\ifdocfinal{\ntprintpersons{1}{1}{committee}{\thecommitteeorder()}\mbox{}}{\mbox{}}}%
+    \ifcovernum{2-1}%
+      {\ifdocfinal{\ntprintpersons[name]{1}{1}{committee}{\thecommitteeorder()}\mbox{}}{\mbox{}}}%
       {\mbox{}}
   \end{minipage}%
-  \hspace{0.04\textwidth}%
-  \begin{minipage}[t]{0.48\textwidth}
-    \ntprintpersons{1}{1}{adviser}{a,c}%
+  \hfill%
+  \begin{minipage}[t]{0.465\textwidth}
+    \ntprintpersons[name]{1}{1}{adviser}{a,c,t}
   \end{minipage}%
-  % \theadviserslabel(\option{/novathesis/docdegree},\option{/novathesis/coverlang})\\[3mm]%
-  % \ntprintpersons{0.5}{1}{adviser}{a,c}%
 }
-
-% Sponsor
-% \ntaddtocover[height=1cm, vspace=2]{1-1}{%
-%   % \fontseries{mc}
-%   ~
-% }
-
-% Document purpose
-% Only if it is a phd doc;
-% \ntaddtocover[degree=phd/phdprop/phdplan, vspace=1]{1-1,2-1}{%
-%   % \fontseries{mc}
-%   \fontsize{10}{10}\selectfont%
-%   \thepresentationtext%
-% }%
 
 % Date
 \ntaddtocover[vspace=1]{1-1,2-1}{%
   % \fontseries{mc}
   \fontsize{14}{14}\selectfont%
-    \thentdocdate(year)%
+    \thentdocdate(submission,year)%
 }
 
-\ifdocfinal{
-  \ntaddtocover[align=j]{2-2}{%
-    \ntfor\match:={%
-      NOVAthesisFiles/Schools/\@nt@univ/\@nt@schl/statement-\option{/novathesis/mainlang}.tex,%
-      NOVAthesisFiles/Schools/\@nt@univ/\@nt@schl/statement.tex%
-    }\do{\IfFileExists{\match}{\input{\match}\ntforbreak}{}}%
-    [%
-      \ClassError{novathesis}{No “statement.tex” found! Not defined with  \string\ntaddfile{statement}{filename} in folders “NOVAthesisFiles/Schools/\@nt@univ/\@nt@schl” nor “NOVAthesisFiles/Schools/\@nt@univ”}{}
-    ]%
-    % \InputIfFileExists{NOVAthesisFiles/Schools/\@nt@univ/\@nt@schl/statement.tex}{}%
-        % {\PackageWarning{novathesis}{Missing statement file “statement.tex” for ”\@nt@univ/\@nt@schl”}}
-  }%
+% Extra vspace for conver 1-1
+\ntaddtocover[vspace=2.6ex]{1-1}{%
+  % \fontseries{mc}
+  \null
 }
 
+% \ifdocfinal{
+%   \ntaddtocover[halign=j]{2-2}{%
+%     \ntfor\match:={%
+%       NOVAthesisFiles/Schools/\@UNIV/\@SCHL/statement-\@LANG@MAIN.tex,%
+%       NOVAthesisFiles/Schools/\@UNIV/\@SCHL/statement.tex%
+%     }\do{\IfFileExists{\match}{\input{\match}\ntforbreak}{}}%
+%     [%
+%       \ClassError{novathesis}{No “statement.tex” found! Not defined with  \string\ntaddfile{statement}{filename} in folders “NOVAthesisFiles/Schools/\@UNIV/\@SCHL” nor “NOVAthesisFiles/Schools/\@UNIV”}{}
+%     ]%
+%     % \InputIfFileExists{NOVAthesisFiles/Schools/\@UNIV/\@SCHL/statement.tex}{}%
+%         % {\PackageWarning{novathesis}{Missing statement file “statement.tex” for ”\@UNIV/\@SCHL”}}
+%   }%
+% }
+%

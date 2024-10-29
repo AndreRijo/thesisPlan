@@ -1,35 +1,44 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% uminho/univ-defaults.ldf
+%% uminho/uminho-defaults.ldf
 %% NOVA thesis configuration file
 %%
 %% Customization for UNIVERSIDADE DO MINHO (strings and cover)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\typeout{NT FILE uminho/univ-defaults.ldf}%
+\typeout{NT FILE uminho/uminho-defaults.ldf}%
 
 %-----------------------------------------------------------------
 % memoir customization
 %-----------------------------------------------------------------
-\ntmemoirsetup{12pt}   % A4paper with main text at 11pt
-\ntmemoirsetup{openany}         % Two print single paged
+\setmemoirfontsize{12}   % A4paper with main text at 12pt
+\openany         % Two print single paged
 
 %-----------------------------------------------------------------
 % novathesis customization
 %-----------------------------------------------------------------
-\ntsetup{secondcover=true}
-\ntsetup{fontstyle=newsgott}
-\ntsetup{statement=true}
+% \ntsetup{lang/cover=pt}
+\ntsetup{print/secondcover=true}
+\ntsetup{print/statement=true}
+\ntsetup{countsecondcover=true}
+\ntsetup{style/font=newsgott}
+
+\ifdocprovisional{\ntsetup{docstatus=final}}{}
+\ifmaindoc{\ifdocfinal{\ntaddfile{cover}[1]{./NOVAthesisFiles/Schools/uminho/cover-final.tex}}{}}{}
+\ntsetup{spine/layout=no}
 
 % --------------------------------------------------------
 % PRINT ORDER FOR frontmatter AND mainmatter
-\ntsetprintorder{frontmatter}{
+\printorder(frontmatter,final):={
   copyright;       % (*) The copyright page
   acknowledgements;% (*) Print the acknowledgments
   statement;       % The statement page
   quote;           % (*) Print the quote
   abstracts;       % Print abstracts in multiple languages.
   alllistof;       % Print all the listof defined in “7_list_of.tex”
+  printglossaries; % Print the Glossary, Acronyms, Symbols, etc…
 }
+
+\printorder(frontmatter,provisional):={\theprintorder(frontmatter,final)}
 
 %-----------------------------------------------------------------
 % Other stuff
@@ -95,12 +104,12 @@
 %-----------------------------------------------------------------
 \NTAddToHook{abstract/pre}{%
   \let\oldchapterheadstart=\chapterheadstart%
-  % \preto{\chapterheadstart}{{\noindent\newsgottbf\Large\thedoctitle(\option{/@nt/currentlang},main)}}%
+  % \preto{\chapterheadstart}{{\noindent\newsgottbf\Large\thedoctitle(\@LSHORT,main)}}%
   \preto{\chapterheadstart}{\vspace*{-2cm}}
 }
 \NTAddToHook{abstract/mid}{%
   % \let\oldchapterheadstart=\chapterheadstart%
-  {{\noindent\newsgottbf\Large\thedoctitle(\option{/@nt/currentlang},main)}\\[1ex]}%
+  {{\noindent\newsgottbf\Large\thedoctitle(\@LSHORT,main)}\\[1ex]}%
 }
 \NTAddToHook{abstract/post}{%
   \let\chapterheadstart=\oldchapterheadstart%
@@ -125,8 +134,8 @@
 %-----------------------------------------------------------------
 
 % Colorscheme as viewed in PDF Reader
-\definecolor{uminhoGREY}{RGB}{145,143,144}
-\definecolor{uminhoRED}{RGB}{158, 26, 37}
+\definecolor{uminhoGREY}{RGB}{151, 153, 155}
+\definecolor{uminhoRED}{RGB}{164, 52, 58}
 
 
 % University
@@ -138,7 +147,7 @@
 \university(logo,GRAY):={uminho-insignia-mono}
 
 % Comiittee printing order
-\committeeorder():={c,r,m}%  
+\committeeorder():={c,r,m}%
 
 % Cover background images
 \thesiscover(phd,1-1,textcolor):={white}
@@ -160,8 +169,8 @@
 \spine(logo,university)={\theuniversity(logo,RGB)}
 \spine(logo,school)={\theschool(logo,RGB)}
 \spine(author)={\thedocauthor(name,short)}
-\spine(title)={\thedoctitle(\option{/novathesis/coverlang},main)}
-\spine(year)={\thentdocdate(year)}
+\spine(title)={\thedoctitle(\@LANG@COVER,main)}
+\spine(year)={\thentdocdate(submission,year)}
 % \spine(top)={116pt}
 \spine(top)={9cm}
 \spine(margin)={3mm}
@@ -192,13 +201,13 @@
 
 
 % University and School logos
-\ntaddtocover[vspace=-0.6mm,align=l,height=2.6cm]{1-1}{%
+\ntaddtocover[vspace=-0.6mm,halign=l,height=2.6cm]{1-1}{%
   \includegraphics[height=2.5cm]{\theuniversity(logo,RGB)}%
   \includegraphics[height=2.5cm]{\theschool(logo,RGB)}%
 }
 
 % University and School logos
-\ntaddtocover[vspace=-0.6mm,,align=l,height=2.6cm]{2-1}{%
+\ntaddtocover[vspace=-0.6mm,,halign=l,height=2.6cm]{2-1}{%
   \hspace*{-0.5pt}%
   \includegraphics[height=2.5cm]{\theuniversity(logo,GRAY)}%
   \hspace{1pt}%
@@ -207,53 +216,69 @@
 
 
 % University and School names
-\ntaddtocover[vspace=1cm,align=l,height=5.25cm,inalign=t]{1-1,2-1}{%
+\ntaddtocover[vspace=1cm,halign=l,height=5.25cm,valign=t]{1-1,2-1}{%
   \fontsize{14}{14}\selectfont%
   \addfontfeature{LetterSpace=2.5}%
-  \textbf{\theuniversity(\option{/novathesis/coverlang})}%
+  \textbf{\theuniversity(pt)}%
   \\%
   \addfontfeature{LetterSpace=1.2}%
-  \newsgottlig\theschool(\option{/novathesis/coverlang})%
+  \newsgottlig\theschool(pt)%
 }
 
 % Author name
-\ntaddtocover[vspace=0mm,align=l]{1-1,2-1}{%
-  \fontsize{16}{16}\selectfont%
-  \addfontfeature{LetterSpace=3.5}%
+\ntaddtocover[vspace=0mm,halign=l]{1-1,2-1}{%
+  \fontsize{17pt}{20.4bp}\selectfont%
+  \addfontfeature{LetterSpace=2.9}%
   \thedocauthor(name)%
 }
 
 % Title of Dissertation
-\ntaddtocover[vspace=0.8cm,align=l,height=7.5cm,inalign=t]{1-1,2-1}{%
+\ntaddtocover[vspace=0.8cm,halign=l,height=5.5cm,valign=t]{1-1,2-1}{%
   \fontsize{17pt}{20.4bp}\selectfont%
   \addfontfeature{LetterSpace=2.9}%
-  \textbf{\thedoctitle(\option{/novathesis/coverlang},main,cover)}
+  \textbf{\thedoctitle(\@LANG@MAIN,main,cover)}
 }
 
 % Degree info
-\ntaddtocover[vspace=0mm,align=l,height=2.4cm,inalign=t]{2-1}{%
-  \fontsize{1417pt}{20.4bp}\selectfont%
-  \thedoctype(\option{/novathesis/coverlang},\option{/novathesis/docdegree})%
+\ntaddtocover[vspace=0mm,halign=l,height=3.9cm,valign=t]{2-1}{%
+  \vfill
+  \fontsize{14}{16.8bp}\selectfont%
+  \thedoctype(\@LANG@COVER,\option{/novathesis/doctype})%
   \\%
-  \thedegreename(\option{/novathesis/coverlang})%
-  \\%
-  \thespecialization(\option{/novathesis/coverlang})%
+  \thedegreename(\@LANG@COVER)%
+  \ifdatadefined{specialization}(\@LANG@COVER){%
+    \\%
+    \thespecialization(\@LANG@COVER)%
+  }{}%
 }
 
 % Advisers
-\ntaddtocover[vspace=0,align=l]{2-1}{%
-  \fontsize{14}{14}\selectfont%
-  \theadvisersrt(\option{/novathesis/coverlang})\\%
+\ntaddtocover[vspace=0.75cm,halign=l]{2-1}{%
+  \fontsize{14}{16.8bp}\selectfont%
+  \theadvisersrt(\@LANG@COVER)\\[\dimexpr-\baselineskip+0.5ex]%
   \textbf{\ntprintpersons{0.9}{0}{adviser}{a,c}}%
 }
 
 % Date
-\ntaddtocover[vspace=1,align=l]{1-1,2-1}{%
+\ntaddtocover[vspace=1,halign=l]{1-1,2-1}{%
   \fontsize{11}{11}\selectfont%
   % \ifdraftdoc
     % \textbf{DRAFT: \today}
   % \else
-    \thentdocdate(month)\theofstr(\option{/novathesis/coverlang})\thentdocdate(year)
+    \thentdocdate(submission,month,text)\theofstr(\@LANG@COVER)\thentdocdate(submission,year)%
   % \fi
 }
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BACK COVER
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Print sponsor logos
+\ntaddtocover[vspace=1, halign=l]{N-2}{%
+  \foreach \myi in {1, ..., 9} {%
+    \ifdatadefined{sponsor}(\@LANG@COVER,\myi,logo){%
+      \thesponsor(\@LANG@COVER,\myi,logo)\qquad%
+    }{}%
+  }%
+}

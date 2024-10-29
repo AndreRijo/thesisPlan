@@ -19,19 +19,33 @@
 
 %"The Introduction should include a short summary of the major issues behind the proposed research, and provide the context of those issues within a broader background (not only in academic, but also in industrial and social terms, if possible). It may already provide a glimpse of the problems and challenges you intend to solve and the kind of results you expect to obtain, in general terms. After reading the Introduction, anyone should get an intuitive grasp of what the research issues are and why they are relevant."
 
-Nowadays, new services and applications appear everyday on the Internet.
-Billions of devices are connected to the Internet, with some large scale applications having millions of daily users.
-Applications such as Spotify, Netflix, Twitter, Amazon, Youtube, among many others operate on a scale not imaginable years ago.
-Supporting large-scale applications has several implications.
-First, multiple data-centers spread across the world are needed, with even more individual servers.
+In the current days, new services and applications appear online everyday.
+Billions of devices are connected to the Internet, interacting between themselves in different forms.
+Applications such as Spotify, Netflix, Instagram, Amazon, Youtube, to mention but a few, operate in a scale unimaginable a couple of years ago, with dozens of millions of users active everyday.
+Supporting world-wide scale applications has several implications.
+First, users expect services to be fast - studies show that even a slight increase to reply time can lead to considerable economic losses \cite{dynamo, eiger}.
 Second, services are expected to be available 24/7, despite failures happening frequently.
-Third, users expect the services to be fast. 
-In some cases even a small increase to latency may imply considerable economic losses to service providers \cite{dynamo,eiger}.
+%Third, services must work correctly at all times - data should be consistent everywhere despite concurrent data modifications.
+Third, services must work correctly at all times - data should always be consistent.
+To cope with those requirements, world-wide services deploy multiple data centers (each with many servers) spread around the world.
+%These implications demand for world-wide scale services to have multiple data centers (each with multiple servers) spread around the world.
 
 As the scale of the services increases, so does the amount of data.
-Traditionally, data is replicated everywhere, thus as the amount of data-centers increases, so does the amount of copies of each data.
-This increases storage costs, network costs and processing costs, as data must be kept up-to-date everywhere.
-Depending on the consistency guarantees of the system, this may also slow down user's operations, due to having to wait for faraway data-centers to confirm the operations.
+Traditionally, data is replicated everywhere, thus as the amount of data centers increases, so does the number of copies of each data.
+This increases storage, networking and processing costs, as data must be kept up-to-date everywhere.
+Depending on the system consistency guarantees, this may also slow down user's operations, 
+%due to having to wait for faraway data centers to confirm the operations.
+due to the time required for faraway data centers to confirm operations.
+
+ %TODO: Check paper for more references on this
+% First, to ensure a fast and smooth access to the services, multiple data centers (and even more servers) spread across the world are needed.
+%Third, users expect the services to be fast. 
+%In some cases even a small increase to latency may imply considerable economic losses to service providers \cite{dynamo,eiger}.
+
+%As the scale of the services increases, so does the amount of data.
+%Traditionally, data is replicated everywhere, thus as the amount of data-centers increases, so does the amount of copies of each data.
+%This increases storage costs, network costs and processing costs, as data must be kept up-to-date everywhere.
+%Depending on the consistency guarantees of the system, this may also slow down user's operations, due to having to wait for faraway data-centers to confirm the operations.
 
 %It is thus essential to develop systems which are fast, scalable and fault tolerant.
 %Those systems should also be easy to use, in order to allow feature-rich applications to be developed upon easily.
@@ -42,53 +56,68 @@ Depending on the consistency guarantees of the system, this may also slow down u
 %This may lead the user to give up on the sale in frustration, possibly resorting to the service of another company, resulting in the loss of a customer.
 %Situations like this can happen due to the distributed nature of the services and must be avoided whenever possible.
 
-\section{Motivation}
-In some services, specially for ones distributed around the world, data does not need to be distributed everywhere.
+\section{Motivation and challenges}
+A key insight is that in many large scale services, specially if world-wide, 
+%In some services, specially for ones distributed around the world, 
+data does not need to be replicated everywhere.
 For instance, consider an e-commerce application with world-wide coverage.
 The information regarding Portuguese customers, as well as stock of products in Portugal, does not need to be replicated everywhere - it is unlikely to be relevant outside of Europe.
-Thus, it can be replicated in European datacenters and, e.g., North American ones for fault tolerance purposes.
-With this, we reduce the following costs: storage (each datacenter holds less data), network (updates of an object are only sent to a subset of the datacenters) and processing (less updates in total for each datacenter to process).
-The method of replication in which each datacenter only replicates a subset of the system's data is known as partial replication.
-Partial replication is not a holy grail though - some issues arise when we consider that data is not replicated everywhere.
+Thus, it can be replicated in European data centers and, e.g., North American ones for fault tolerance purposes.
+With this, we reduce the following costs: storage (each data center holds less data), network (updates of an object are only sent to a subset of the data centers) and processing (less updates in total for each data center to process).
+The method of replication in which each data center only replicates a subset of the system's data is known as partial replication.
+Partial replication is not a holy grail though - multiple issues arise when data is not replicated everywhere.
 
-The replication algorithm running in each datacenter must know, for each object it replicates, which other datacenters also replicate said object.
-This can be difficult to dealt with, as the partitioning may change over time and the distribution of objects may not be uniform across datacenters - that is, each datacenter may replicate different subsets of data, potentially with overlaps.
+First, under partial replication, maintaining application properties (invariants) valid at all times is rather challenging. %Actually, it should be said here that it is EVEN MORE CHALLENGING in partial replication than it already is in full replication. Albeit most of the challenge comes from weak vs strong consistency (which I don't talk about), and not as much full vs partial.
+E.g., consider an invariant regarding sales of tickets for a concert across multiple sale spots - we may want to ensure we do not sell more tickets than the capacity of the venue.
+The data regarding those sales may be spread across different data centers.
+Different levels of consistency or coordination may be required to ensure correctness, depending on the criticality of an operation. \todo{Honestly, I do not know where (in this Motivation subsection) should this part of invariants be. Suggestions are welcome.}
+
+Second, the replication algorithm running in each data center must know, for each object it replicates, which other data centers also replicate said object.
+This can be difficult to dealt with, as the partitioning may change over time and the distribution of objects may not be uniform across data centers - that is, each data center may replicate different subsets of data, potentially with overlaps.
 E.g., DC1 replicates object 'A' and 'B', while DC2 replicates 'A' but not 'B' and DC3 replicates 'B' but not 'A'.
 
+%In fully replicated systems, an already challenging problem is keeping certain properties (invariants) of the system valid at all times - e.g., ensuring the amount of tickets sold for a given concert across multiple sale spots is not above a certain value.
+%With partial replication, this problem is even more complicated as data referent to those sale spots may be partitioned across different data centers.
+%Different levels of consistency or coordination may be required depending on the criticality of an operation.
+
 Furthermore, supporting transactions under partial replication is challenging.
-In one hand, a transaction may span objects that are all present in the origin datacenter, but with those objects being spread across different places in other datacenters (as in the example above).
-One solution would be to send the entire transaction information to all datacenters with at least one object of the transaction, but this would be inefficient.
-It is thus necessary to design an algorithm which can analyse a transaction and send only the necessary information for each server, while still ensuring data is kept consistent everywhere.
-A proper algorithm will allow for a reduction on the amount of data sent, and thus also on the processing needed in the receiving end.
+On one hand, a transaction may span objects that are all present in the origin data center, but whose objects are spread across different places in other data centers, as in the example above.
+One solution would be to send the entire transaction to all data centers with at least one of those objects, but this would be inefficient.
+It is thus necessary to design an algorithm capable of analysing a transaction and sending only the necessary information for each server, while still ensuring data is kept consistent everywhere.
+A proper algorithm will both reduce the amount of data sent and processing required in the receiving end.
+%A proper algorithm will allow for a reduction on the amount of data sent, and thus also on the processing needed in the receiving end.
 
 %Queries
-Another problem arises with queries (and similarly with updates).
-Even with an optimal partitioning scheme, which is a difficult problem on its own, sometimes a client may issue transactions to a datacenter where some queries/updates are for objects not replicated in said datacenter.
+%Another problem arises with both queries and updates.
+Another problem arises regarding transactions.
+Even with an optimal partitioning scheme, which is a difficult problem on its own, sometimes a client may issue transactions to a data center where some of the operations are for objects not replicated %in said datacenter.
+locally.
 This poses many difficulties.
-One could consider splitting a transaction, sending each part to one datacenter.
+One could consider splitting a transaction, sending each part to one data center.
 But this may require coordination, increasing latency. 
-It is also difficult to ensure consistency of data read in different places without increasing latency even further.
-In fact, if this kind of transactions are common, it may even be better to resort to full replication.
-Another solution would be to still execute the transaction as a whole, but have the datacenter starting the transaction coordinate/fetch the necessary information in some form.
-This still leads to the problems mentioned above.
-A better solution may consist in finding mechanisms to reduce the need for transactions across datacenters.
-Regardless, any system employing partial replication must consider the issue of transactions across datacenters.
+It is also difficult to ensure consistency of data read in different places without %increasing latency even further.
+further increasing latency.
+Another solution would be to still execute the transaction as a whole, but have the data center starting the transaction coordinate/fetch the necessary information in some form.
+However, this still leads to the aforementioned problems.
+In fact, if this kind of transactions are common, it may even be better to fall back to full replication. %than to deploy any of the aforementioned solutions.
+Thus, a better alternative consists in creating mechanisms to reduce the frequency of cross data centers transactions.
+Regardless, any system employing partial replication must consider this issue. %Is it clear? Here I mean the issue of "cross data centers transactions"
 
-The query issue is further exacerbated when we consider recurring queries, specially analytic or OLAP queries \cite{dbtoaster,viewSelection}.
+The issue above is further exacerbated when we consider complex recurring queries, specially analytic or OLAP queries \cite{dbtoaster,viewSelection}.
 In analytic queries, often large amounts of data need to be processed.
-For example, in an e-commerce system, one may want to query the ``top 10 most sold products world-wide''.
-This kind of queries are essential to make well-informed business decisions.
+For instance, in an e-commerce system, one may want to query the "top 10 most sold products world-wide''.
+This kind of queries are essential to make well-informed business decisions. %TODO: citation
 If a product suddenly becomes very popular, supply chains may need to be reinforced quickly to maintain stock, and it may be wise to make the product easier to find in the application.
 However, to compute this kind of information, a large sum of data needs to be processed - potentially sales of all products.
-Yet, the query must be answered quickly - if it takes too long, the relevant business decision may be done too late and a big opportunity for profit may have been missed, or customer satisfaction may be impacted.
-This problem is already quite interesting and challenging even under full replication, as it is difficult to process large sums of data (long-executing query) while keeping results consistent and letting the system keep processing other queries/updates.
-Partial replications complicates this problem ten-fold, as now the data necessary is not present in one data-center but instead spread across many different faraway datacenters.
-Proper mechanisms are essential, as coordinating long-executing queries across faraway datacenters is not viable.
+Yet the query must be answered quickly and efficiently - if not, the relevant business decision may happen too late and thus miss a big opportunity for profit, or negatively impact customer satisfaction.
+%Yet, the query must be answered quickly and efficiently - if not, the relevant business decision may be done too late and a big opportunity for profit may have been missed, or customer satisfaction may be impacted.
+This problem is already quite interesting and challenging even under full replication, as it is difficult to process large sums of data (long-executing query) while keeping results consistent and without hindering other ongoing queries and updates. %TODO: Citation
+Partial replication complicates this problem ten-fold,, as now the necessary data is spread across many different and faraway data centers.
+%Partial replication complicates this problem ten-fold, as now the necessary data is not present in one data center but instead spread across many faraway data centers.
+Proper mechanisms are essential, as coordinating long-executing queries across faraway data centers is not viable.
 
-In short, bringing partial replication to large-scale, world-wide distributed applications is essential to reduce operating costs of systems and keep them scalable.
-However, partial replication arises new issues due to data not being available everywhere and further exacerbates already existing problems/difficult challenges.
-
-\todo{I didn't mention anything to motivate different consistency levels or invariants. And I think the motivation text is too long. On the other hand, the proposed solution is shorter.}
+In short, bringing partial replication to large scale, world-wide distributed applications is essential to reduce operating costs of systems and keep them scalable.
+However, partial replication arises new issues due to data not being available everywhere and further exacerbates already existing problems and challenges.
 
 %Recurring queries
 	%Versions? Consistency? Views?
@@ -138,25 +167,48 @@ However, partial replication arises new issues due to data not being available e
 \todo{Should I maybe say ``some of the aforementioned issues''?}
 
 In our work, we plan to tackle the aforementioned issues.
-In general terms, we intend to design algorithms optimized for partial replication which address the challenges that were mentioned previously.
+In general terms, we intend to design algorithms optimized for partial replication which address the challenges previously mentioned.
 We also aim to implement a geo-distributed database with partial replication that shows our vision and implements our algorithms, which will be used both as a proof-of-concept and to evaluate our algorithms.
 
 Starting from the end, we aim to provide materialized views as part of our answer to recurring, analytic queries regarding large amounts of data.
 Materialized views will hold the necessary data to answer the query efficiently.
 For example, one can define a view that contains the list of the most sold products.
-Our provision of materialized views will be novel, as they will be operating under partial replication - namely, our views will be able to relate/summarize data that may be partitioned across multiple datacenters, without any single point that has all the data necessary to compute the view.
+Our provision of materialized views will be novel, as they will be operating under partial replication - namely, our views will be able to relate/summarize data that may be partitioned across multiple data centers, without any single entity that has all the data necessary to fully compute the view.
 This implies developing algorithms which keep the view up-to-date and consistent, despite partial replication of the necessary data.
-Efficiency of updating the view is also essential, as materialized views are often considered expensive to maintain.
+Efficiency of view updating is also essential, as materialized views are often considered expensive to maintain. %Citation?
 
 The replication and transactional algorithms we will need to design and implement will also be both novel and challenging.
-Not only they will have to coupe with partial replication (which has the challenges mentioned previously), an even more interesting challenge comes in how to support view updating without all the necessary data being present in one datacenter.
+Not only they will have to coupe with partial replication (which has the challenges mentioned previously), an even more interesting challenge comes in how to support view updating without all the necessary data being present in one data center.
 This implies that our replication algorithm will have to ensure views are kept up-to-date whenever a relevant object is updated, even if many replicas of the view do not replicate said object.
 Our transactional algorithm will also have to ensure the views stay consistent with the objects they refer to, in order to avoid animalities which affect user experience and application development.
 Thus, our algorithms need not only to cope with partial replication, but also with the challenge of providing views with a global scope under the scenario of partial replication.
-Furthermore, we also have to tackle common issues of materialized views, namely storage and maintenance costs by, e.g., incorporating non-uniform replication in our replication algorithm and using appropriate datatypes to hold the necessary view data.
+Furthermore, we also have to tackle common issues of materialized views, namely storage and maintenance costs by, e.g., incorporating non-uniform replication in our replication algorithm and using appropriate data types to hold the necessary view data.
 
-\todo{I don't think I need an expected contributions page anymore? I already mention what is novel and indirectly what is our main contributions. Chapter \ref{cha:research_statement} will detail this more anyway}
+Finally, in order to ensure latency optimality of transactions, weak consistency will be used. %TODO: Citation
+However, it is hard to program on top of weak consistency systems, as many anomalies are exposed to the programmer. %TODO: Citation!
+Thus, in our prototype, we will deploy causal consistency and extend the model to our views. %TODO: Citation
+Furthermore, we will reinforce our consistency guarantees with invariants that will be maintained by specialized data types and mechanisms, as well as offering different levels of consistency - both of which must support partial replication and views.
+Finally, our system will support both SQL and a key-value interface, which must be intercompatible.
+This by itself is already quite challenging, as SQL is very expressive. \todo{Note: I did not motivate the need for SQL/key-value interface in the previous subsection.}
+All these mechanisms are essential to ensure our algorithms and mechanisms are as  practical and accessible as possible to system developers.
 
+\todo{Is an expected contributions subsection necessary? In a way it is already described what will be our main contributions, and Chapter \ref{cha:research_statement} will detail this more anyway}
+
+\subsection{Expected contributions}
+
+Given the aforementioned challenges and proposed solution, we expect the main contributions of the work to be:
+
+\begin{itemize}
+	\item Design and implementation of algorithms for efficient geo distributed replication, combining partial and non-uniform replication to reduce network, storage and processing costs;
+	\item Design and implementation of a transaction algorithm supporting multiple consistency levels;
+	\item A solution for analytic queries spanning high amounts of data though the usage of materialized views.
+	Views may span data partitioned across many servers and data centers.
+	Views must also stay consistent and up-to-date despite weak consistency;
+	\item Provision of useful correctness guarantees to application developers, both through employment of useful consistency models and invariants;% (the latter is quite challenging under weak consistency and partial replication);
+	\item A database implementation of all algorithms developed in this work. Our database will provide varied and rich data types well suited for geo distributed applications.
+	\item A rich database interface with support for both SQL and key-value style access, extended with useful operations. %My idea was to mention our key-value interface is not only "get and set", but rather we provide many operations appropriate for each data type.
+	%If can fit, maybe should mention @ evaluation?
+\end{itemize}
 
 
 %In our work, we aim to provide a solution for geo-distributed systems in which low latency is essential, while still providing a useful set of features and guarantees.

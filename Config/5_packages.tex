@@ -6,35 +6,56 @@
 
 \typeout{NT FILE Config/5_packages.tex}%
 
+% \ntlangsetup{pt/contentsname=O MEU ÍNDICE}
+% \ntlangsetup{en/contentsname=MY LITTLE TOC}
+
 %%============================================================
-%%  ADD YOUR PACKAGES AND OTHER CUSTOMIZATIONS HERE
+%%  FOR DEMO PURPOSES ONLY --- YOU SHOULD REMOVE THESE PACKAGES
 %%============================================================
-
-% \usepackage{widows-and-orphans} % add warnings about widows and orphans to “template.log”
-
-\usepackage{paralist}     % To enable costumizble enumerates.  See the documentation.
-
-\usepackage[textsize=footnotesize]{todonotes}  % To register TODO notes in the text
-\presetkeys{todonotes}{inline}{}
-
-\usepackage{makecell}      % Multilie table cells and control vertical and horizontal alignment
-
-% \usepackage{indentfirst}       % Indent first list after a (sub)section title
-
 \usepackage{float}        % FOR DEMO PURPOSES ONLY --- PLEASE REMOVE
 \usepackage{wrapfig}      % FOR DEMO PURPOSES ONLY --- PLEASE REMOVE
 \restylefloat{figure}     % FOR DEMO PURPOSES ONLY --- PLEASE REMOVE
 \usepackage{metalogo}     % FOR DEMO PURPOSES ONLY --- PLEASE REMOVE
 \usepackage{lipsum}       % FOR DEMO PURPOSES ONLY --- PLEASE REMOVE
+\IfFileExists{byo-twemojiss.sty}{
+  \usepackage{byo-twemojis}     % to typeset emojis
+  \newcommand{\emojiSmile}{\raisebox{-3pt}{\scalebox{1.3}{\byoTwemoji{head; eyes normal opened; mouth laughing}}}}
+}{
+  \newcommand{\emojiSmile}{\texttt{:D}}
+  \newlength{\twemojiDefaultHeight}
+}
 
+\newcommand{\MikTeX}{Mik\TeX}
+\newcommand{\TeXLive}{\TeX Live}
+\newcommand{\pdfLaTeX}{pdf\LaTeX}
+\definecolor{Schlgray}{gray}{0.95}
+
+
+%%============================================================
+%%  ADD YOUR PACKAGES AND OTHER CUSTOMIZATIONS HERE
+%%============================================================
 
 %Packages I added myself
 \usepackage[inline]{enumitem}
+\setlist{itemsep=0pt}%parsep=3pt
+
+
+
+% \usepackage[orphans/prevent, widows/prevent]{widows-and-orphans} % add warnings about widows and orphans to “template.log”
+% \usepackage{refcheck}     % list used and unused labels
+
+%\usepackage{paralist}     % To enable costumizable enumerates.  See the documentation.
+
+\usepackage[textsize=footnotesize]{todonotes}  % To register TODO notes in the text
+
+\usepackage{makecell}      % Multiline table cells and control vertical and horizontal alignment
+
+\usepackage{tcolorbox}    % pretty print color boxes
+
+% \usepackage{indentfirst}       % Indent first list after a (sub)section title
 
 % \usepackage{algorithm2e}
 % \RestyleAlgo{ruled}
-
-% \usepackage{refcheck}     % list used and unused labels
 
 % \usepackage{minted}    % Fontification of source code listings
 
@@ -68,6 +89,3 @@
 %       {ç}{{\c c}}1 {Ç}{{\c C}}1 {ø}{{\o}}1 {å}{{\r a}}1 {Å}{{\r A}}1
 %       {€}{{\EUR}}1 {£}{{\pounds}}1
 % }
-
-
-
