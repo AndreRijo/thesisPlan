@@ -91,6 +91,14 @@
 	year={2011}
 }
 
+@inproceedings{chainreaction,
+	title={ChainReaction: a causal+ consistent datastore based on chain replication},
+	author={Almeida, S{\'e}rgio and Leit{\~a}o, Jo{\~a}o and Rodrigues, Lu{\'\i}s},
+	booktitle={Proceedings of the 8th ACM European Conference on Computer Systems},
+	pages={85--98},
+	year={2013}
+}
+
 %eventual
 @article{dynamo,
 	title={Dynamo: Amazon's highly available key-value store},
@@ -112,6 +120,18 @@
 	pages={35--40},
 	year={2010},
 	publisher={ACM New York, NY, USA}
+}
+
+%Per record sequential consistency
+@article{pnuts,
+	title={PNUTS: Yahoo!'s hosted data serving platform},
+	author={Cooper, Brian F and Ramakrishnan, Raghu and Srivastava, Utkarsh and Silberstein, Adam and Bohannon, Philip and Jacobsen, Hans-Arno and Puz, Nick and Weaver, Daniel and Yerneni, Ramana},
+	journal={Proceedings of the VLDB Endowment},
+	volume={1},
+	number={2},
+	pages={1277--1288},
+	year={2008},
+	publisher={VLDB Endowment}
 }
 
 %Geo-distributed strong consistency
@@ -187,7 +207,7 @@
 	publisher={VLDB Endowment}
 }
 
-@article{hildred2023caerus,
+@article{caerus,
 	title={Caerus: Low-Latency Distributed Transactions for Geo-Replicated Systems},
 	author={Hildred, Joshua and Abebe, Michael and Daudjee, Khuzaima},
 	journal={Proceedings of the VLDB Endowment},
@@ -195,6 +215,24 @@
 	number={3},
 	pages={469--482},
 	year={2023},
+	publisher={VLDB Endowment}
+}
+
+@article{detock,
+	title={Detock: High Performance Multi-region Transactions at Scale},
+	author={Nguyen, Cuong DT and Miller, Johann K and Abadi, Daniel J},
+	journal={Proceedings of the ACM on Management of Data},
+	volume={1},
+	number={2},
+	pages={1--27},
+	year={2023},
+	publisher={ACM New York, NY, USA}
+}
+
+@article{lu2021epoch,
+	title={Epoch-based commit and replication in distributed OLTP databases},
+	author={Lu, Yi and Yu, Xiangyao and Cao, Lei and Madden, Samuel},
+	year={2021},
 	publisher={VLDB Endowment}
 }
 
@@ -243,6 +281,40 @@
 	booktitle={Proceedings of the 8th ACM European Conference on Computer Systems},
 	pages={113--126},
 	year={2013}
+}
+
+%SconeKV: strong consistency Key-Value Store
+@article{sconekv,
+	title={SconeKV: A Scalable, Strongly Consistent Key-Value Store},
+	author={Gon{\c{c}}alves, Jo{\~a}o and Matos, Miguel and Rodrigues, Rodrigo},
+	journal={IEEE Transactions on Parallel and Distributed Systems},
+	volume={33},
+	number={12},
+	pages={4164--4175},
+	year={2022},
+	publisher={IEEE}
+}
+
+%Strong consistency system
+@inproceedings{krikellas2010strongly,
+	title={Strongly consistent replication for a bargain},
+	author={Krikellas, Konstantinos and Elnikety, Sameh and Vagena, Zografoula and Hodson, Orion},
+	booktitle={2010 IEEE 26th International Conference on Data Engineering (ICDE 2010)},
+	pages={52--63},
+	year={2010},
+	organization={IEEE}
+}
+
+%Strong consistency (2024 publication)
+@article{tdsql,
+	title={TDSQL: Tencent Distributed Database System},
+	author={Chen, Yuxing and Pan, Anqun and Lei, Hailin and Ye, Anda and Han, Shuo and Tang, Yan and Lu, Wei and Chai, Yunpeng and Zhang, Feng and Du, Xiaoyong},
+	journal={Proceedings of the VLDB Endowment},
+	volume={17},
+	number={12},
+	pages={3869--3882},
+	year={2024},
+	publisher={VLDB Endowment}
 }
 
 %Eiger: causal geo-distributed
@@ -400,6 +472,17 @@
 	pages={821--821},
 	year={2003},
 	organization={IEEE Computer Society}
+}
+
+@article{radt,
+	title={Replicated abstract data types: Building blocks for collaborative applications},
+	author={Roh, Hyun-Gul and Jeon, Myeongjae and Kim, Jin-Soo and Lee, Joonwon},
+	journal={Journal of Parallel and Distributed Computing},
+	volume={71},
+	number={3},
+	pages={354--368},
+	year={2011},
+	publisher={Elsevier}
 }
 
 %Data-flow materialized views

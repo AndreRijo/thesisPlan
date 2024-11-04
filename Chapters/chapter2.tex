@@ -19,9 +19,10 @@ For each concept, multiple different solutions exist and thus it is necessary to
 
 This chapter organizes as follows.
 Section \ref{sec:cap} describes the CAP theorem, presenting the foundations to the diversity of solutions for data storing.
-Section \ref{sec:consistency} discusses how data consistency is maintained in storage systems.
-Section \ref{sec:replication} introduces multiple concepts related with data replication, raging from replication synchronization to data distribution. Section
-\ref{sec:data_access} focuses on databases and efficient provisioning of queries, closing up with a discussion on existing solutions which apply the diverse concepts introduced in this chapter.
+%Section \ref{sec:consistency} discusses how data consistency is maintained in storage systems.
+Section \ref{sec:consistency} discusses how storage systems handle data consistency.
+Section \ref{sec:replication} introduces multiple concepts related with data replication, raging from replication synchronization to data distribution. 
+Section \ref{sec:data_access} focuses on databases and efficient query provisioning, closing up with a discussion on existing solutions which apply the diverse concepts introduced in this chapter.
  \todo{Is this okay? @Reference to Section \ref{sec:replication}}
 
 %Nowadays the internet is full of services, raging from entertainment purposes to e-commerce, information, business and others.
@@ -49,10 +50,10 @@ However, the CAP theorem \cite{cap} states that it is only possible to, at most,
 	\item \textbf{P}artition-tolerance - the system keeps operating and evolving state correctly even in the presence of message loss and network partitions.
 \end{enumerate*}
 
-Typically, since network partitions are common on systems distributed across multiple places \cite{understandingEC}, the choice tends to be between providing Strong Consistency or Availability.
-It is noteworthy that one does not need to select ``all or nothing'' \cite{understandingEC}. 
+Typically, since network partitions are common on systems distributed across multiple regions \cite{understandingEC}, the choice tends to be between providing Strong Consistency or Availability.
+It is noteworthy that one does not need to choose ``all or nothing'' \cite{understandingEC}. 
 Systems providing \textbf{C}onsistency and \textbf{P}artition-tolerance (CP), can still be available in the presence of some faults, but will eventually stop to evolve state if too many nodes fail or too many messages are lost \cite{cap}.
-On the other hand, systems providing \textbf{A}vailability and \textbf{P}artition-tolerance can still provide some consistency guarantees, known as Weak Consistency. However, the replicas will diverge at times and conflicting states may be observed due to the concurrent execution of operations.
+On the other hand, systems providing \textbf{A}vailability and \textbf{P}artition-tolerance can still provide some consistency guarantees, known as Weak Consistency. However, the replicas will diverge at times and conflicting states may be observed due to the concurrent execution of operations \cite{understandingEC}.
 
 \section{Consistency}
 \label{sec:consistency}
@@ -63,93 +64,126 @@ Despite the variety of models, they can be grouped as either being a form of \em
 \subsection{Strong consistency}
 \label{subsec:strong}
 
-In models providing strong consistency, all clients observe the same state of the system independently of the replica contacted by the client(s).
-In order to achieve this, it is necessary to totally order all write operations executed in the system, which requires coordination among the different replicas \cite{linearizability, spanner}.
-Depending on the configuration of the system, even to execute a single read operation, many replicas may need to be contacted.
-This is necessary as at any point it must be ensured that the client can read the latest state.
+In strong consistency models, all clients observe the same state of the system independently of the replica contacted by the client(s).
+%In order to achieve this, 
+To achieve this, it is necessary to totally order all write operations executed in the system, which requires coordination among the different replicas \cite{linearizability,spanner,caerus,mdcc,detock,chainreaction}.
+%Depending on the configuration of the system, even to execute a single read operation, many replicas may need to be contacted. %Citation?
+Depending on the system configuration, even to execute a single read operation it may be needed to contact a majority of replicas or a master replica \cite{spanner,slog}.
+This is necessary in order to ensure the client always reads the latest correct state.
+%This is necessary as at any point it must be ensured that the client reads the latest state.
 
-The strong requirements of coordination imply that strongly consistent systems, in order to tolerate network partitions, may have to come to an halt (unavailable) when enough replicas can not be contacted to execute an operation, in order to prevent state divergence or incorrect values being returned.
-Strongly consistent systems tend to be easier to develop applications on than weaker consistency, as they are easier to reason about \cite{spanner}.
-However, the costs of synchronization can be prohibitively high for large scale systems, specially if replicated across the globe, as latency for operations quickly racks up.
-Due to the requirement of a total order, it also tends to be difficult to scale to many clients and maintain high throughput.
+The strong requirements of coordination imply that strongly consistent systems, in order to tolerate network partitions, may have to come to an halt (unavailable) when enough replicas can not be contacted to execute an operation, in order to prevent state divergence or incorrect values being returned \cite{sconekv,cure,chainreaction,dynamo}.
+Furthermore, the costs of synchronization can be prohibitively high for large scale systems, specially if replicated across the globe, as latency for operations quickly racks up \cite{caerus,mdcc,detock}.
+Also, due to the total order requirement, it is often difficult to scale to a high number of clients and maintain high throughput under contention \cite{krikellas2010strongly,dynamo}.
+On the other hand, strongly consistent systems tend to be easier to develop applications on than weaker consistency, as they are easier to reason about and do not expose consistency anomalies \cite{spanner,sconekv,slog,chainreaction,dynamo}.
 
-Multiple models implementing strong consistency have been proposed in the literature  \cite{linearizability, si}: serializability, linearizability and snapshot isolation to name a few.
+A few models implementing strong consistency have been proposed in the literature \cite{linearizability,si}, such as: serializability, linearizability and snapshot isolation.
+Recent research focuses on lowering the number of round trips needed for transaction execution, as well as leveraging on batching, data locality and other similar techniques, in order to reduce commit latency and improve throughput \cite{sconekv,caerus,detock,slog,tdsql}. %Should I add that another goal (by leveraging on data locality) is to reduce the number/percentage of geo-distributed/multi-DC transactions/commits? But in a way, that's reducing commit latency and improving throughput.
+%Multiple models implementing strong consistency have been proposed in the literature \cite{linearizability, si}: serializability, linearizability and snapshot isolation to name a few.
 
 \subsection{Weak consistency}
 \label{subsec:weak}
 
-Models providing weak consistency are considerably more relaxed in terms of requirements compared to strong consistency \cite{understandingEC}.
-As such, they also provide weaker guarantees, making them harder to reason about and build applications on.
-For instance, concurrent updates on the same objects may lead to undesired results or values.
-The states of the replicas may diverge, with read anomalies and ``illogical'' (in the context of an application) states being observed.
+Weak consistency models are considerably more relaxed in terms of requirements compared to strong consistency \cite{understandingEC}.
+As such, they also provide weaker guarantees, making them harder to reason about and build applications on \cite{krikellas2010strongly,sconekv,slog,cops,cure,chainreaction,dynamo}.
+Indeed, concurrent updates on the same objects may lead to undesired results or values.
+%Replicas' state may diverge, with read anomalies and ``illogical'' (in the context of an application) states being observed \cite{krikellas2010strongly,detock,slog,cops,cure,dynamo}.
+Replicas' state may diverge, with read anomalies and inconsistent states being observed \cite{krikellas2010strongly,detock,slog,cops,cure,dynamo}.
 For example, in a group communication system, under some consistency models, user A may see user B replying to user C's message before he even sees user C's message.
 This can be very confusing to the users.
-However, the weaker requirements of weakly consistent systems gives potential to many advantages compared to strong consistency: better fault tolerance (operations can keep executing even under network partitions), lower latency and higher scalability in terms of throughput and number of clients.
+However, the weaker requirements of weakly consistent systems gives potential to many advantages compared to strong consistency: better fault tolerance (operations keep executing even under network partitions), lower latency and higher scalability in both throughput and number of clients \cite{slog,cops,cure,dynamo}.
 
 One of the most basic consistency models is eventual consistency \cite{understandingEC}.
 In short, eventual consistency provides only one guarantee: when updates stop occurring, eventually the state of the replicas will converge.
-However, several issues are left in the open. For example: what happens when the same object is concurrently updated? Which states can be observed on reads? How do the states evolve as updates are being applied?
+However, several issues are left in the open - e.g., what happens when the same object is concurrently updated? Which states can be observed on reads? How do the states evolve as updates are being applied?
+Thus, many other weak consistency models have been studied in the literature \cite{understandingEC, session, cops, dynamo, cassandra, walter, pnuts}, e.g. causal consistency, causal+, monotonic reads, read committed, per record sequential, PSI, etc.
 
-Many other weak consistency models have been studied in the literature \cite{understandingEC, session, cops, dynamo, cassandra, walter}, e.g. causal consistency, causal+, monotonic reads, PSI, etc.
-Causal consistency is of particular interest as it provides useful guarantees.
-In a general form, causal consistency ensures that operations casually related  \cite{lamport2019time}, i.e. in which one happens before the other, are seen according to said order by every client.
+Causal consistency \cite{cops,eiger,chainreaction,cure} is of particular interest as it provides useful guarantees.
+In a general form, causal consistency ensures that operations casually related \cite{lamport2019time}, i.e. in which one happens before the other, are seen according to said order by every client.
 This means that, e.g., a read that happens after a write must reflect the effects of said write.
-With causal consistency, the aforementioned example of group communication system would no longer be possible - user C would always see user B's reply after seeing user A's message, as they are causally related \cite{lamport2019time, walter}.
+With causal consistency, the aforementioned example of group communication system would no longer be possible - user A would always see user B's reply after seeing user C's message, as they are causally related \cite{lamport2019time, walter}.
 
-\todo{Any system that provides causal consistency on the level of a single object only? I couldn't find any other than... a CRDT itself.}
+\todo{Any system that provides causal consistency on the level of a single object only? I couldn't find any other than... a CRDT itself. (I do not think PNUTS counts as single-object causality, as some authors call it "same-key sequential consistency")}
 
 Causality can be provided either in the context of a single object (i.e., causality between different objects is not ensured) or between multiple objects \cite{understandingEC}.
-The former is tougher/costly to maintain, as an order needs to be maintained between all objects, but more useful.
-For example, in a online shopping system which allows users to keep track of when a product is restocked, it is desirable for the notifications sent to the users to be causally related with the restocking action (as we do not want users to receive the notification before they can see the product in stock).
-For this use case, causality between objects is desirable.
+The former is tougher/costly to maintain, as an order needs to be maintained between potentially all objects, but more useful.
+For example, in a online shopping system which allows users to track when a product is restocked, 
+%it is desirable 
+we want
+for the notifications sent to the users to be causally related with the restocking action, as we do not want users to receive the notification before they can see the product in stock.
+%For this use case, causality between objects is useful.
+For this use case (as well as the group communication example, among others), causality between objects is very useful and eases application development.
 
-Causal+ consistency \cite{cops} still applies the same ideas of causal consistency, but also ensures the replicas do not diverge forever, by applying techniques to solve concurrency conflicts deterministically in all replicas.
-By definition, causal consistency does not ensure replicas converge \cite{cops}.
+Causal+ consistency \cite{cops,chainreaction,cure} extends causal consistency by ensuring replicas do not diverge forever, through techniques that solve concurrency conflicts deterministically in all replicas.
+%Causal+ consistency \cite{cops,chainreaction,cure} still applies the same ideas of causal consistency, but also ensures the replicas do not diverge forever, by applying techniques to solve concurrency conflicts deterministically in all replicas.
+By definition, causal consistency does not ensure replicas converge \cite{cops,chainreaction}.
 
-Monotonic reads \cite{session, understandingEC} gives one simple to understand guarantee: consecutive reads on the same object, must always return the same value or a more recent value.
+Monotonic reads \cite{session, understandingEC} gives one simple to understand guarantee: consecutive reads on the same object must always return the same value or a more recent value.
 This means that after a value is read, it is not possible to read again an older value.
 It is however possible to read stale data, or keep reading the same value despite more recent values existing.
 In distributed systems, it is important to define if this guarantee is given at a single server level or across servers, as the latter may imply having to wait for data to arrive and be processed if the client issues reads in different servers.
 
 Snapshot Isolation (SI) is an interesting model.
-The intuition behind SI is that each transaction sees a consistent view of the database \cite{si}.
-To be more precise, it sees a ``snapshot'', where all the objects are at the same version and the database is in a consistent state.
-Under SI the transactions in a replica are totally ordered, thus preventing concurrency conflicts when updating the same objects.
-Reads on a transaction are executed on the snapshot, never blocking.
-Writes are applied on a higher version when the transaction commits, if no other transaction that commited in the meantime modified the same objects.
-However, some anomalities can still occour under SI.
-E.g., consider two objects 'c' and 'd', and two transactions 'A' and 'B'.
+%The intuition behind SI is that each transaction sees a consistent view of the database \cite{si}.
+%To be more precise, it sees a ``snapshot'', where all the objects are at the same version and the database is in a consistent state.
+The intuition behind SI is that each transaction sees a consistent view of the database \cite{si} - a ``snapshot'', where all objects are at the same version and the database is in a consistent state.
+Under SI, the transactions in a replica are totally ordered, thus preventing concurrency conflicts when updating the same objects.
+This implies coordination is required to commit a transaction.
+In SI, reads on a transaction are executed on a snapshot, never blocking.
+Writes are applied on a higher version when the transaction commits, if no other transaction that committed in the meantime modified the same object(s).
+However, some anomalies can still occur under SI.
+E.g., consider objects 'c' and 'd', and transactions 'A' and 'B'.
 Consider now that both transactions read 'c' with value of 5. 
 If transaction 'B' updates 'c' to 10, and transaction 'A' reads 'c' and copies the value of 'c' to 'd', both transactions can commit.
 However, it is possible for 'B' to be ordered before 'A' and yet, end up with 'c' = 10 and 'd' = 5.
 This would not be possible under serialization.
 
-Parallel Snapshot Isolation (PSI) is an extension of SI that allows transactions in different replicas to commit in different orders \cite{walter}.
-This model is useful for weak consistency systems, as they can provide strong guarantees when clients access only one server and, for example, causality between updates on different replicas, thus still allowing high performance. \todo{I do critize this hybrid approach in the geo replication section.}
+Parallel Snapshot Isolation (PSI) extends SI by allowing transactions issued in different replicas to commit in different orders \cite{walter}.
+%Parallel Snapshot Isolation (PSI) is an extension of SI that allows transactions issued in different replicas to commit in different orders \cite{walter}.
+PSI is useful for weak consistency systems, as they can provide strong guarantees when clients access only one server and, e.g., causality between updates on different replicas, thus still allowing high throughput and low latency in some cases.
+However, under PSI, coordination may still be needed for some transactions, as PSI guarantees there are no write conflicts.
+\todo{I do criticize this hybrid approach in the geo replication section.}
 
-\todo{This text will most likely need to be changed depending on how the introduction is written.}
-In PotionDB we provide PSI, with causal+ consistency (hereafter causal consistency) for transactions executed in different servers. Our causality guarantees are cross object.
-The views provided in our system are directly co-related to the data of other objects, thus it is desirable that when a client observes a change in said objects, they can also observe the change in the views.
-We provide causality even if the client contacts a different server.
-\todo{Likely need a better way to talk about this challenge.}
-Note that providing causal consistency is specially challenging in PotionDB's scenario, as data is partially replicated.
-Thus, it is possible for views to be related with objects of different partitions, and there not exist a single server which has both the view and all said objects.
-Causality must be ensured despite such difficulty, i.e., causality between objects that are not even replicated in the same server.
+Sovran et. al. \cite{walter} define PSI+cset as an extension of PSI.
+This extension states that if all operations of a given data type are commutative between themselves (e.g., a counter with only increment and decrement), then updates on objects of said data type never conflict.
+%This extension notes that if an object's data type operations are all commutative between themselves (e.g., a counter with only increment and decrement), then updates on 
+%This extension notes that if two concurent updates to the same object are done with operations that are commutative (e.g., an increment and decrement of a counter), then there is no write-conflict and thus both transactions can commit.
+
+\todo{Is this paragraph ok? Or should I say something like "PotionDB will provide (...)"?}
+In PotionDB we provide PSI+cset, with causal+consistency (hereafter causal consistency) for transactions executed in different servers.
+We provide causality even if the client contacts a different server. \todo{Is "We provide causality even if the client contacts a different server" clear? My intention: when a client stops contacting its server and contacts a different one, causality is still kept, as he/she will ask for a snapshot more recent than the last one he/she observed.}
+Our causality guarantees are cross object.
+The views in our system are directly co-related to data of other objects, thus when a client observes a change in one of such objects, it must also observe the corresponding change in the views.
+Causality between objects and views is very challenging in PotionDB's scenario, as data is partially replicated.
+Thus, views can be related to objects of different partitions, without a single server having said view and all of its objects.
+%Thus, it is possible for views to be related to objects of different partitions, without a single server having said view and all of its objects.
+Causality must still be ensured despite this difficulty.
+In PotionDB synchronization is never required to commit a transaction, as all our objects only support commutative operations - thus there are no write conflicts. \todo{Should this last phrase be in this subsection, or on the next one, after I talk about CRDTs?}
+
+%In PotionDB we provide PSI, with causal+ consistency (hereafter causal consistency) for transactions executed in different servers. Our causality guarantees are cross object.
+%The views provided in our system are directly co-related to the data of other objects, thus it is desirable that when a client observes a change in said objects, they can also observe the change in the views.
+%We provide causality even if the client contacts a different server.
+%Note that providing causal consistency is specially challenging in PotionDB's scenario, as data is partially replicated.
+%Thus, it is possible for views to be related with objects of different partitions, and there not exist a single server which has both the view and all said objects.
+%Causality must be ensured despite such difficulty, i.e., causality between objects that are not even replicated in the same server.
 
 To accommodate use cases in which higher throughput is desirable and causality is not needed for the read, we also provide monotonic reads as long as the client is sticky to one server.
-We note that even in this scenario, the client always reads state left by some commited transaction, i.e., there is no interferance  from ongoing transactions.
+Note that even with monotonic reads, in PotionDB the client only observes states generated by committed transactions.
+%We note that even in this scenario, the client always reads state left by some committed transaction, i.e., there is no interference from ongoing transactions. %i.e., no dirty reads, read commited.
 
 \subsection{CRDTs and other conflict resolution techniques}
 \label{subsec:crdt}
 
+\todo{After talking about PSI in detail (namely that it does not allow write conflicts) and that with cset extension there is no conflicts, maybe this section is a bit confusing?}
+\todo{A possible idea would be to say in the previous section that we provide PSI (and not mention @ commutativity), and then here detail that actually we provide the PSI+cset extension}
 %CRDTs/operational transformation
 Both with eventual and causal consistency, concurrent updates on the same objects can occur and lead to conflicts \cite{understandingEC}.
 For instance, if an element is concurrently added and removed from a set, it is not clear what should be the final state.
 Concurrency conflicts need to be dealt with, in order for all replicas' state to converge.
-Solutions for handling conflicts can range from totally ordering operations following some criteria (e.g., using logical clocks and replica IDs), letting the user/application deal with the conflicting state (e.g., in a register with concurrent writes, use application logic to decide which value to stay) or forcing all operations to be commutative (if operations commute then the result will be the same, independently of the order by which they are applied).
+Solutions for handling conflicts can range from preventing them through coordination (as in PSI without csets), totally ordering operations following some criteria (e.g., using logical clocks and replica IDs), letting the user/application deal with the conflicting state (e.g., in a register with concurrent writes, use application logic to decide which value to stay) or forcing all operations to be commutative (if operations commute then the result will be the same, independently of the order by which they are applied).
 
 In PotionDB we make usage of CRDTs \cite{crdt} to represent our datatypes.
-CRDTs, or \textbf{C}onflict-Free  \textbf{R}eplicated \textbf{D}ata \textbf{Types}, are data types designed to be used in large-scaled distributed systems offering weak consistency.
+CRDTs, or \textbf{C}onflict-Free  \textbf{R}eplicated \textbf{D}ata \textbf{T}ypes, are data types designed to be used in large-scale distributed systems offering weak consistency.
 Concurrency conflicts are solved by the CRDT itself, by designing operations to be commutative.
 Updates and reads can execute locally without synchronization, with all replicas of a CRDT eventually converging.
 Updates get propagated asynchronously.
@@ -157,10 +191,12 @@ This allows for high availability and low latency on accessing CRDTs, as it is e
 Multiple policies for handling conflicts are available for the same datatypes, allowing CRDTs to more easily adapt to the needs of each application \cite{crdtMultipolicy, crdt}.
 
 Alternative solutions based on commutativity have been studied in the literature. 
-One such solution is OT, \textbf{O}perational \textbf{T}ransformation \cite{ot, otCorrectness}.
+One such solution is RADTs (\textbf{R}eplicated \textbf{A}bstract \textbf{D}ata \textbf{T}ypes) \cite{radt}, which are similar to CRDTs but with more limited conflict resolution policies.
+Another solution is OT, \textbf{O}perational \textbf{T}ransformation \cite{ot, otCorrectness}.
 The intuition behind OT is that conflicting operations can, when arriving on a replica, be ``transformed'' to be commutative and thus not conflict.
 However, it is usually considered harder and more error-prone to design said transformations instead of, as in CRDTs, designing operations to be commutative from the start \cite{otCorrectness, crdt}.
 We believe CRDTs' ease of use and flexibility with solving conflicts justify its usage over OT-based solutions in PotionDB.
+
 
 \section{Replication}
 \label{sec:replication}
