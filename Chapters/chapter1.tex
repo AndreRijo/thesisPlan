@@ -103,9 +103,9 @@ Thus, a better alternative consists in creating mechanisms to reduce the frequen
 Regardless, any system employing partial replication must consider this issue. %Is it clear? Here I mean the issue of "cross data centers transactions"
 
 The issue above is further exacerbated when we consider complex recurring queries, specially analytic or OLAP queries~\cite{dbtoaster,viewSelection,sioulas2023real}.
-In analytic queries, often large amounts of data need to be processed~\cite{clickhouse2024, analyticdb}.
+In analytic queries, often large amounts of data need to be processed~\cite{clickhouse, analyticdb}.
 For instance, in an e-commerce system, one may want to query the "top 10 most sold products world-wide''.
-This kind of queries are essential to make well-informed business decisions~\cite{clickhouse2024, hadad}.
+This kind of queries are essential to make well-informed business decisions~\cite{clickhouse, hadad}.
 If a product suddenly becomes very popular, supply chains may need to be reinforced quickly to maintain stock, and it may be wise to make the product easier to find in the application.
 However, to compute this kind of information, a large sum of data needs to be processed - potentially sales of all products.
 Yet the query must be answered quickly and correctly - if not, the relevant business decision may happen too late, leading to profit losses or negative impact on customer satisfaction.
@@ -114,7 +114,7 @@ Yet the query must be answered quickly and correctly - if not, the relevant busi
 This problem is already quite interesting and challenging even under full replication, as it is difficult to process large sums of data (long-executing query) while keeping results consistent and without hindering ongoing queries and updates \cite{analyticdb}.
 Partial replication complicates this problem ten-fold, as now the necessary data is spread across many different and faraway data centers.
 %Partial replication complicates this problem ten-fold, as now the necessary data is not present in one data center but instead spread across many faraway data centers.
-Proper mechanisms are essential, as coordinating long-executing queries across faraway data centers is not viable \cite{clickhouse2024}.
+Proper mechanisms are essential, as coordinating long-executing queries across faraway data centers is not viable \cite{clickhouse}.
 
 In short, bringing partial replication to large scale, world-wide distributed applications is essential to reduce operating costs of systems and keep them scalable.
 However, partial replication arises new issues due to data not being available everywhere and further exacerbates already existing problems and challenges.

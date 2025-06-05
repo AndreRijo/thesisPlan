@@ -146,6 +146,21 @@
 	publisher={ACM New York, NY, USA}
 }
 
+@article{megastore,
+	title={Megastore: Providing scalable, highly available storage for interactive services},
+	author={Baker, Jason and Bond, Chris and Corbett, James C and Furman, JJ and Khorlin, Andrey and Larson, James and Leon, Jean-Michel and Li, Yawei and Lloyd, Alexander and Yushprakh, Vadim},
+	year={2011}
+}
+
+%Partial replication, geo-distributed, linearizable for single keys
+@inproceedings{scatter,
+	title={Scalable consistency in Scatter},
+	author={Glendenning, Lisa and Beschastnikh, Ivan and Krishnamurthy, Arvind and Anderson, Thomas},
+	booktitle={Proceedings of the Twenty-Third ACM Symposium on Operating Systems Principles},
+	pages={15--28},
+	year={2011}
+}
+
 %Causal consistency, avoids write-write conflicts with PSI
 @inproceedings{walter,
 	title={Transactional storage for geo-replicated systems},
@@ -153,6 +168,16 @@
 	booktitle={Proceedings of the Twenty-Third ACM Symposium on Operating Systems Principles},
 	pages={385--400},
 	year={2011}
+}
+
+%Defines so-called ideal criterias for a replication algorithm (applies partial replication)
+@inproceedings{practi,
+	title={PRACTI Replication.},
+	author={Belaramani, Nalini Moti and Dahlin, Michael and Gao, Lei and Nayate, Amol and Venkataramani, Arun and Yalagandula, Praveen and Zheng, Jiandan},
+	booktitle={NSDI},
+	volume={6},
+	pages={5--5},
+	year={2006}
 }
 
 @incollection{lamport2019time,
@@ -229,11 +254,42 @@
 	publisher={ACM New York, NY, USA}
 }
 
-@article{lu2021epoch,
+@article{epoch,
 	title={Epoch-based commit and replication in distributed OLTP databases},
 	author={Lu, Yi and Yu, Xiangyao and Cao, Lei and Madden, Samuel},
 	year={2021},
 	publisher={VLDB Endowment}
+}
+
+%Strong-consistency, geo-replicated, document-based DB, with support for partial replication
+@inproceedings{cockroachdb,
+	title={Enabling the next generation of multi-region applications with CockroachDB},
+	author={VanBenschoten, Nathan and Ajmani, Arul and Gartner, Marcus and Matei, Andrei and Shah, Aayush and Sharif, Irfan and Shraer, Alexander and Storm, Adam and Taft, Rebecca and Tan, Oliver and others},
+	booktitle={Proceedings of the 2022 International Conference on Management of Data},
+	pages={2312--2325},
+	year={2022}
+}
+
+%Automatic data re-partitioning/migration
+@article{morphosys,
+	title={MorphoSys: automatic physical design metamorphosis for distributed database systems},
+	author={Abebe, Michael and Glasbergen, Brad and Daudjee, Khuzaima},
+	journal={Proceedings of the VLDB Endowment},
+	volume={13},
+	number={13},
+	pages={3573--3587},
+	year={2020},
+	publisher={VLDB Endowment}
+}
+
+
+%Partitioning (similar idea of single-thread to PotionDB)
+@incollection{h-store,
+	title={The end of an architectural era: It's time for a complete rewrite},
+	author={Stonebraker, Michael and Madden, Samuel and Abadi, Daniel J and Harizopoulos, Stavros and Hachem, Nabil and Helland, Pat},
+	booktitle={Making Databases Work: the Pragmatic Wisdom of Michael Stonebraker},
+	pages={463--489},
+	year={2018}
 }
 
 %OT
@@ -296,7 +352,7 @@
 }
 
 %Strong consistency system
-@inproceedings{krikellas2010strongly,
+@inproceedings{bargain,
 	title={Strongly consistent replication for a bargain},
 	author={Krikellas, Konstantinos and Elnikety, Sameh and Vagena, Zografoula and Hodson, Orion},
 	booktitle={2010 IEEE 26th International Conference on Data Engineering (ICDE 2010)},
@@ -361,6 +417,15 @@
 	pages={405--414},
 	year={2016},
 	organization={IEEE}
+}
+
+@inproceedings{optimisticPartial,
+	title={Optimistic algorithms for partial database replication},
+	author={Schiper, Nicolas and Schmidt, Rodrigo and Pedone, Fernando},
+	booktitle={International Conference On Principles Of Distributed Systems},
+	pages={81--93},
+	year={2006},
+	organization={Springer}
 }
 
 @inproceedings{nonUniform,
@@ -465,6 +530,38 @@
 	year={2007}
 }
 
+@article{oracleViews,
+	title={Automated generation of materialized views in Oracle},
+	author={Ahmed, Rafi and Bello, Randall and Witkowski, Andrew and Kumar, Praveen},
+	journal={Proceedings of the VLDB Endowment},
+	volume={13},
+	number={12},
+	pages={3046--3058},
+	year={2020},
+	publisher={VLDB Endowment}
+}
+
+@inproceedings{marviq,
+	title={Marviq: Quality-Aware Geospatial Visualization of Range-Selection Queries Using Materialization},
+	author={Dong, Liming and Bai, Qiushi and Kim, Taewoo and Chen, Taiji and Liu, Weidong and Li, Chen},
+	booktitle={Proceedings of the 2020 ACM SIGMOD International Conference on Management of Data},
+	pages={67--82},
+	year={2020}
+}
+
+@article{estocada,
+	title={ESTOCADA: towards scalable polystore systems},
+	author={Alotaibi, Rana and Cautis, Bogdan and Deutsch, A and Latrache, Moustafa and Manolescu, Ioana and Yang, Y},
+	journal={Proceedings of the VLDB Endowment},
+	volume={13},
+	number={12},
+	pages={2949--2952},
+	year={2020},
+	publisher={VLDB Endowment}
+}
+
+
+
 @inproceedings{dbproxy,
 	title={DBProxy: A dynamic data cache for Web applications},
 	author={Amiri, Khalil and Park, Sanghyun and Tewari, Renu and Padmanabhan, Sriram},
@@ -513,6 +610,22 @@
 	pages={4--11},
 	year={1989},
 	publisher={ACM New York, NY, USA}
+}
+
+@inproceedings{bp-tree,
+	title={BP-Tree: Overcoming the point-range operation tradeoff for in-memory B-trees},
+	author={Xu, Helen and Li, Amanda and Wheatman, Brian and Marneni, Manoj and Pandey, Prashant},
+	booktitle={Proceedings of the 2024 ACM Workshop on Highlights of Parallel Computing},
+	pages={29--30},
+	year={2024}
+}
+
+@inproceedings{bindex,
+	title={BinDex: A Two-Layered Index for Fast and Robust Scans},
+	author={Li, Linwei and Zhang, Kai and Guo, Jiading and He, Wen and He, Zhenying and Jing, Yinan and Han, Weili and Wang, X Sean},
+	booktitle={Proceedings of the 2020 ACM SIGMOD International Conference on Management of Data},
+	pages={909--923},
+	year={2020}
 }
 
 %SQL
@@ -583,17 +696,6 @@
 	year={2021}
 }
 
-@article{clickhouse2024,
-	title={ClickHouse-Lightning Fast Analytics for Everyone},
-	author={Schulze, Robert and Schreiber, Tom and Yatsishin, Ilya and Dahimene, Ryadh and Milovidov, Alexey},
-	journal={Proceedings of the VLDB Endowment},
-	volume={17},
-	number={12},
-	pages={3731--3744},
-	year={2024},
-	publisher={VLDB Endowment}
-}
-
 @article{sioulas2023real,
 	title={Real-Time Analytics by Coordinating Reuse and Work Sharing},
 	author={Sioulas, Panagiotis and Mytilinis, Ioannis and Ailamaki, Anastasia},
@@ -610,4 +712,70 @@
 	pages={2059--2070},
 	year={2019},
 	publisher={VLDB Endowment}
+}
+
+@article{clickhouse,
+	title={ClickHouse-Lightning Fast Analytics for Everyone},
+	author={Schulze, Robert and Schreiber, Tom and Yatsishin, Ilya and Dahimene, Ryadh and Milovidov, Alexey},
+	journal={Proceedings of the VLDB Endowment},
+	volume={17},
+	number={12},
+	pages={3731--3744},
+	year={2024},
+	publisher={VLDB Endowment}
+}
+
+%Causal consistency fo Function-as-a-service (FaaS)
+@inproceedings{hydrocache,
+	author = {Wu, Chenggang and Sreekanti, Vikram and Hellerstein, Joseph M.},
+	title = {Transactional Causal Consistency for Serverless Computing},
+	year = {2020},
+	isbn = {9781450367356},
+	publisher = {Association for Computing Machinery},
+	address = {New York, NY, USA},
+	url = {https://doi.org/10.1145/3318464.3389710},
+	doi = {10.1145/3318464.3389710},
+	booktitle = {Proceedings of the 2020 ACM SIGMOD International Conference on Management of Data},
+	pages = {83–97},
+	numpages = {15},
+	keywords = {serverless computing, low-latency, causal consistency},
+	location = {Portland, OR, USA},
+	series = {SIGMOD '20}
+}
+
+%OLAP+OLTP, deploying partial replication
+@article{asymmetric,
+	title={Asymmetric-partition replication for highly scalable distributed transaction processing in practice},
+	author={Lee, Juchang and Kim, Kyu Hwan and Lee, Hyejeong and Andrei, Mihnea and Ko, Seongyun and Keller, Friedrich and Han, Wook-Shin},
+	journal={Proceedings of the VLDB Endowment},
+	volume={13},
+	number={12},
+	pages={3112--3124},
+	year={2020},
+	publisher={VLDB Endowment}
+}
+
+%Scientific data analytics
+@article{parcur,
+	title={Real-Time Analytics by Coordinating Reuse and Work Sharing},
+	author={Sioulas, Panagiotis and Mytilinis, Ioannis and Ailamaki, Anastasia},
+	journal={arXiv preprint arXiv:2307.08018},
+	year={2023}
+}
+
+@misc{AWSLatency,
+	author = {Matt Adorjan},
+	title = {CloudPing},
+	howpublished = {~\url{https://www.cloudping.co/grid}},
+	year = {2015},
+	note = {Accessed on 27th May 2025}
+}
+
+%Studies related with increasing latency
+@misc{LatencyIncrease,
+	author = {Dries Buytaert},
+	title = {Faster is better},
+	howpublished = {~\url{https://dri.es/faster-is-better}},
+	year = {2009},
+	note = {Accessed on 27th May 2025}
 }
