@@ -761,39 +761,79 @@ Thus, MDCC is not appropriate for scenarios with popular items (e.g., social med
 %Thus, MDCC is not appropriate in scenarios where write conflicts can happen frequently.
 %Can also mention that MDCC does not provide atomic visiblity - only atomic durability.
 
-\paragraph{SLOG.} SLOG \cite{slog} is a geo-distributed strongly consistent system that aims to provide low latency and high throughput.
-They propose using data locality to reduce the latency of a RTT.
-All data in the system has a master replica; writes and linearisable rads must be directed to it (snapshot reads can be at any replica).
-For transactions acessing data that is all mastered in one data center, SLOG commits without coordination with other datacenters, achieving low latency commit (assuming the client is also nearby).
-However, clients faraway from the master pay high latency even if the data is also replicated nearby.
-Transactions spanning masters in more than one data center also pay high latency.
-%If a client transaction accesses data that is all mastered in the same datacenter, and the client is close to it (data locality), then SLOG provides low latency as it commit
+\paragraph{SLOG.} SLOG \cite{slog} is a geo-distributed, strongly consistent system that aims to provide low latency and high throughput.
+SLOG proposes using data locality to reduce RTT duration.
+Each data item has a master replica;
+%All data in the system has a master replica; 
+writes and linearisable rads must be directed to it (snapshot reads can be at any replica).
+If all data accessed in a transaction is mastered in one data center, 
+%For transactions whose accessed data is all mastered in one data center, 
+SLOG commits without cross data center coordination, achieving low latency commit (assuming the client is also nearby).
+However, high latency is incurred if clients are faraway from the master - even if a nearby replica also holds the data -  or if a transaction spans masters in different data centers.
+%However, clients faraway from the master pay high latency even if the data is present in a nearby replica
+%Transactions spanning masters in more than one data center also pay high latency.
 
-\paragraph{SLOG.} SLOG \cite{slog} is a geo-distributed strongly consistent system which aims to provide low latency and high throughput.
-They propose to make usage of data locality to provide low latency transactions.
-All data in the system has a master replica.
-Writes must always be directed at the master replica, and so do linearizable reads (they do support snapshot reads in other replicas).
-However, if all the data a client wants to access is mastered in the same datacenter, and the client is close to it (data locality), then SLOG provides low latency as it commits without coordinating with other datacenters.
-However, clients faraway from the master need to pay high latency even if the client is close to some replica of the object.
-Transactions spanning masters in more than one datacenter must also pay high latency.
+SLOG offers high throughput even under high contention,
+%Other noteworthy features include high throughput even under high contention on data access, 
+as well as automatic data remastering without considerable throughput impact.
+These properties come at a cost - clients cannot abort a transaction after submitting; transactions must be deterministic and must be fully known at the planning phase - i.e., dynamic transactions are not supported.
 
-Other noteworthy features include the provision of high throughput even under high contention on data access, as well as automatic data remastering without hindering throughput considerably.
-However, these features, alongside with low latency transactions, come at a cost - transactions must be deterministic; after a client submits a transaction the client cannot abort the transaction; transactions must be fully known during the planning phase, i.e., it does not support dynamic transactions.
+%9
+%6
 
-\paragraph{Dynamo.} Dynamo \cite{dynamo} is a weakly consistent, highly available key-value store.
+%\paragraph{SLOG.} SLOG \cite{slog} is a geo-distributed strongly consistent system which aims to provide low latency and high throughput.
+%They propose to make usage of data locality to provide low latency transactions.
+%All data in the system has a master replica.
+%Writes must always be directed at the master replica, and so do linearizable reads (they do support snapshot reads in other replicas).
+%However, if all the data a client wants to access is mastered in the same datacenter, and the client is close to it (data locality), then SLOG provides low latency as it commits without coordinating with other datacenters.
+%However, clients faraway from the master need to pay high latency even if the client is close to some replica of the object.
+%Transactions spanning masters in more than one datacenter must also pay high latency.
+%
+%Other noteworthy features include the provision of high throughput even under high contention on data access, as well as automatic data remastering without hindering throughput considerably.
+%However, these features, alongside with low latency transactions, come at a cost - transactions must be deterministic; after a client submits a transaction the client cannot abort the transaction; transactions must be fully known during the planning phase, i.e., it does not support dynamic transactions.
+
+%TODO: For Dynamo, cut content if needed. It's not really that relevant, I'm mostly describing it because it's a "standard". Atm it has 13+6=19 lines, aim to ~12. (at worst 14)
+
+%Now it is at 10+4. Not bad!
+
+\paragraph{Dynamo.} Dynamo \cite{dynamo} is a weakly consistent, highly available key-value store designed by Amazon.
 It provides eventual consistency with a simple get/put interface.
-Dynamo leverages on multiple features in order to provide low latency and a resilient service at a large scale.
-Data is partitioned across the nodes with a zero-hop DHT, with each node knowing the location of every data item.
-Dynamo is also capable of leveraging on the different capacities of each server by using virtual nodes - more powerful servers represent multiple virtual nodes.
-Each object is replicated in N virtual nodes, being said N configurable. Reads/writes must happen in, respectively, R/W replicas to be confirmed, being both parameters also configurable.
-Write conflicts due to concurrent updates are handled by the application using Dynamo - Dynamo detects those conflicts, keeping multiple versions of the object and giving them to the application.
-The application then merges the versions with its own logic when executing a read.
-Practical experience suggests that version divergence is a rare occurrence.
+Dynamo leverages on multiple features to achieve low latency and to be resilient at large scale.
+Data is partitioned with a zero-hop DHT, and every node knows how to reach every data item.
+Dynamo embraces hardware heterogeneity - powerful servers represent multiple nodes.
+Each object is replicated in N nodes, and reads/writes involve R/W replicas - these parameters are configurable for different trade-offs of performance and safety.
+Dynamo detects write conflicts and keeps all conflicting versions - on a read, Dynamo returns the conflicting versions for the application to merge.
+The authors claim in their practical experience, state divergence rarely happens.
 
-Dynamo is totally decentralized, applying a P2P structure.
-Gossip is used to handle changes to the membership and failures, as well as building the zero-hop DHT.
-Dynamo's structure allows it to provide low latency replies even at the 99.9\% percentile, while ensuring high availability and data durability.
-However, providing only eventual consistency, having conflicts be merged by applications and no object abstractions increases the difficulty of developing applications that use Dynamo.
+Dynamo applies a fully decentralized P2P structure.
+Gossip is used for membership changes, failure detection and building the DHT.
+Dynamo focuses on 99.9\% latency, while ensuring resilience, high availability and data durability.
+However, eventual consistency, no automatic data merge or object abstracts makes it hard to develop for Dynamo.
+
+%ChatGPT
+Dynamo. Dynamo \cite{dynamo}, designed by Amazon, is a weakly consistent, highly available key-value store offering eventual consistency via a simple get/put interface.
+It achieves low latency and large-scale resilience through several features: zero-hop DHT partitioning (every node can reach any data item), support for hardware heterogeneity (powerful servers act as multiple nodes), and configurable replication (each object is stored on N nodes, with reads/writes involving R/W replicas to balance performance and safety).
+
+Dynamo detects write conflicts and returns all conflicting versions for application-level resolution, though the authors report state divergence is rare in practice.
+It uses a fully decentralized P2P architecture, with gossip for membership, failure detection, and DHT maintenance.
+Dynamo emphasizes 99.9% latency, resilience, availability, and durability.
+However, its eventual consistency, lack of automatic conflict resolution, and absence of object abstractions make it challenging for developers.
+
+
+%\paragraph{Dynamo.} Dynamo \cite{dynamo} is a weakly consistent, highly available key-value store.
+%It provides eventual consistency with a simple get/put interface.
+%Dynamo leverages on multiple features in order to provide low latency and a resilient service at a large scale.
+%Data is partitioned across the nodes with a zero-hop DHT, with each node knowing the location of every data item.
+%Dynamo is also capable of leveraging on the different capacities of each server by using virtual nodes - more powerful servers represent multiple virtual nodes.
+%Each object is replicated in N virtual nodes, being said N configurable. Reads/writes must happen in, respectively, R/W replicas to be confirmed, being both parameters also configurable.
+%Write conflicts due to concurrent updates are handled by the application using Dynamo - Dynamo detects those conflicts, keeping multiple versions of the object and giving them to the application.
+%The application then merges the versions with its own logic when executing a read.
+%Practical experience suggests that version divergence is a rare occurrence.
+%
+%Dynamo is totally decentralized, applying a P2P structure.
+%Gossip is used to handle changes to the membership and failures, as well as building the zero-hop DHT.
+%Dynamo's structure allows it to provide low latency replies even at the 99.9\% percentile, while ensuring high availability and data durability.
+%However, providing only eventual consistency, having conflicts be merged by applications and no object abstractions increases the difficulty of developing applications that use Dynamo.
 
 \paragraph{COPS.} COPS \cite{cops} is a weakly consistent key-value store for the wide-area.
 COPS defines and provides causal+ consistency, with causal relationships possible even between objects in different servers (data can be partitioned inside a datacenter but not across datacenters).

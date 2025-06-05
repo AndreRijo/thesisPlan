@@ -88,7 +88,7 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {paragraph}{Dynamo.}{19}{section*.52}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{COPS.}{20}{section*.53}%
+\contentsline {paragraph}{COPS.}{19}{section*.53}%
 \defcounter {refsection}{0}\relax 
 \contentsline {paragraph}{Cure.}{20}{section*.55}%
 \defcounter {refsection}{0}\relax 
@@ -98,7 +98,7 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {paragraph}{ChronoCache.}{21}{section*.59}%
 \defcounter {refsection}{0}\relax 
-\contentsline {paragraph}{TxCache.}{22}{section*.60}%
+\contentsline {paragraph}{TxCache.}{21}{section*.60}%
 \defcounter {refsection}{0}\relax 
 \contentsline {paragraph}{DBToaster.}{22}{section*.61}%
 \defcounter {refsection}{0}\relax 
