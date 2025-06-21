@@ -449,6 +449,16 @@
 	year={2015}
 }
 
+%RedBlue consistency
+@inproceedings{li2012making,
+	title={Making $\{$Geo-Replicated$\}$ systems fast as possible, consistent when necessary},
+	author={Li, Cheng and Porto, Daniel and Clement, Allen and Gehrke, Johannes and Pregui{\c{c}}a, Nuno and Rodrigues, Rodrigo},
+	booktitle={10th USENIX Symposium on Operating Systems Design and Implementation (OSDI 12)},
+	pages={265--278},
+	year={2012}
+}
+
+
 %Materialized views
 @article{dbtoaster,
 	title={DBToaster: higher-order delta processing for dynamic, frequently fresh views},
@@ -541,6 +551,17 @@
 	publisher={VLDB Endowment}
 }
 
+@article{birds,
+	title={BIRDS: programming view update strategies in datalog},
+	author={Tran, Van-Dang and Kato, Hiroyuki and Hu, Zhenjiang},
+	journal={Proceedings of the VLDB Endowment},
+	volume={13},
+	number={12},
+	pages={2897--2900},
+	year={2020},
+	publisher={VLDB Endowment}
+}
+
 @inproceedings{marviq,
 	title={Marviq: Quality-Aware Geospatial Visualization of Range-Selection Queries Using Materialization},
 	author={Dong, Liming and Bai, Qiushi and Kim, Taewoo and Chen, Taiji and Liu, Weidong and Li, Chen},
@@ -559,7 +580,6 @@
 	year={2020},
 	publisher={VLDB Endowment}
 }
-
 
 
 @inproceedings{dbproxy,
@@ -628,6 +648,15 @@
 	year={2020}
 }
 
+@inproceedings{lisa,
+	title={LISA: A learned index structure for spatial data},
+	author={Li, Pengfei and Lu, Hua and Zheng, Qian and Yang, Long and Pan, Gang},
+	booktitle={Proceedings of the 2020 ACM SIGMOD international conference on management of data},
+	pages={2119--2133},
+	year={2020}
+}
+
+
 %SQL
 @inproceedings{sequel,
 	title={SEQUEL: A structured English query language},
@@ -645,6 +674,37 @@
 	year = {2018},
 }
 
+@inproceedings{ycsb,
+	title={Benchmarking cloud serving systems with YCSB},
+	author={Cooper, Brian F and Silberstein, Adam and Tam, Erwin and Ramakrishnan, Raghu and Sears, Russell},
+	booktitle={Proceedings of the 1st ACM symposium on Cloud computing},
+	pages={143--154},
+	year={2010}
+}
+
+@misc{tc,
+	author = {Hubert, Bert},
+	title={tc(8) - Linux manual page},
+	howpublished = {~\url{https://man7.org/linux/man-pages/man8/tc.8.html}},
+	year = {2025},
+}
+
+@misc{AWSLatency,
+	author = {Matt Adorjan},
+	title = {CloudPing},
+	howpublished = {~\url{https://www.cloudping.co/}},
+	year = {2025},
+	note = {Accessed on 19th Jun 2025}
+}
+
+@misc{Grid5000,
+	author = {Grid'5000 group},
+	title = {Grid'5000 is a large-scale and flexible testbed for experiment-driven research in all areas of computer science},
+	howpublished = {~\url{https://www.grid5000.fr/w/Grid5000:Home}},
+	year = {2025},
+	note = {Accessed on 19th June 2025},
+}
+
 %This includes a lot of useful concepts, like ACID, BASE, list of key-value stores, etc.
 @inproceedings{mongoVScassandra,
 	title={NoSQL databases: MongoDB vs cassandra},
@@ -652,15 +712,6 @@
 	booktitle={Proceedings of the international C* conference on computer science and software engineering},
 	pages={14--22},
 	year={2013}
-}
-
-%Invariants in weak consistency
-@inproceedings{boundedCounter,
-	title={Extending eventually consistent cloud databases for enforcing numeric invariants},
-	author={Balegas, Valter and Serra, Diogo and Duarte, S{\'e}rgio and Ferreira, Carla and Shapiro, Marc and Rodrigues, Rodrigo and Pregui{\c{c}}a, Nuno},
-	booktitle={2015 IEEE 34th Symposium on Reliable Distributed Systems (SRDS)},
-	pages={31--36},
-	organization={IEEE}
 }
 
  @misc{rabbitmq, 
@@ -763,6 +814,18 @@
 	year={2023}
 }
 
+%Incremental view maintenance
+@article{dbsp,
+	title={DBSP: Automatic Incremental View Maintenance for Rich Query Languages},
+	author={Budiu, Mihai and Chajed, Tej and McSherry, Frank and Ryzhyk, Leonid and Tannen, Val},
+	journal={Proceedings of the VLDB Endowment},
+	volume={16},
+	number={7},
+	pages={1601--1614},
+	year={2023},
+	publisher={VLDB Endowment}
+}
+
 @misc{AWSLatency,
 	author = {Matt Adorjan},
 	title = {CloudPing},
@@ -779,3 +842,99 @@
 	year = {2009},
 	note = {Accessed on 27th May 2025}
 }
+
+%Invariants
+@inproceedings{putting,
+	title={Putting consistency back into eventual consistency},
+	author={Balegas, Valter and Duarte, S{\'e}rgio and Ferreira, Carla and Rodrigues, Rodrigo and Pregui{\c{c}}a, Nuno and Najafzadeh, Mahsa and Shapiro, Marc},
+	booktitle={Proceedings of the Tenth European Conference on Computer Systems},
+	pages={1--16},
+	year={2015}
+}
+
+@article{avoidence,
+	title={Coordination avoidance in database systems},
+	author={Bailis, Peter and Fekete, Alan and Franklin, Michael J and Ghodsi, Ali and Hellerstein, Joseph M and Stoica, Ion},
+	journal={Proceedings of the VLDB Endowment},
+	volume={8},
+	number={3},
+	pages={185--196},
+	year={2014},
+	publisher={VLDB Endowment}
+}
+
+@inproceedings{strongenough,
+	title={'Cause I'm Strong Enough: Reasoning about consistency choices in distributed systems},
+	author={Yang, H and Gotsman, A and Ferreira, C and Najafzadeh, M and Shapiro, M},
+	booktitle={43rd ACM Symposium on Principles of Programming Languages (POPL 2016)},
+	year={2016},
+	organization={Association for Computing Machinery}
+}
+
+@inproceedings{finegrained,
+	title={Fine-grained consistency for geo-replicated systems},
+	author={Li, Cheng and Pregui{\c{c}}a, Nuno and Rodrigues, Rodrigo},
+	booktitle={2018 USENIX Annual Technical Conference (USENIX ATC 18)},
+	pages={359--372},
+	year={2018}
+}
+
+@article{boundedconcurrency,
+	title={Safe replication through bounded concurrency verification},
+	author={Kaki, Gowtham and Earanky, Kapil and Sivaramakrishnan, KC and Jagannathan, Suresh},
+	journal={Proceedings of the ACM on Programming Languages},
+	volume={2},
+	number={OOPSLA},
+	pages={1--27},
+	year={2018},
+	publisher={ACM New York, NY, USA}
+}
+
+%Escrow techniques
+@article{escrow,
+	title={The escrow transactional method},
+	author={O'Neil, Patrick E},
+	journal={ACM Transactions on Database Systems (TODS)},
+	volume={11},
+	number={4},
+	pages={405--430},
+	year={1986},
+	publisher={ACM New York, NY, USA}
+}
+
+
+%Invariants in weak consistency
+@inproceedings{boundedCounter,
+	title={Extending eventually consistent cloud databases for enforcing numeric invariants},
+	author={Balegas, Valter and Serra, Diogo and Duarte, S{\'e}rgio and Ferreira, Carla and Shapiro, Marc and Rodrigues, Rodrigo and Pregui{\c{c}}a, Nuno},
+	booktitle={2015 IEEE 34th Symposium on Reliable Distributed Systems (SRDS)},
+	pages={31--36},
+	year={2015},
+	organization={IEEE}
+}
+
+@article{antidotesql,
+	title={Antidote SQL: relaxed when possible, strict when necessary},
+	author={Lopes, Pedro and Sousa, Jo{\~a}o and Balegas, Valter and Ferreira, Carla and Duarte, S{\'e}gio and Bieniusa, Annette and Rodrigues, Rodrigo and Pregui{\c{c}}a, Nuno},
+	journal={arXiv preprint arXiv:1902.03576},
+	year={2019}
+}
+
+@article{ipa,
+	title={IPA: Invariant-preserving applications for weakly-consistent replicated databases},
+	author={Balegas, Valter and Pregui{\c{c}}a, Nuno and Duarte, S{\'e}rgio and Ferreira, Carla and Rodrigues, Rodrigo},
+	journal={arXiv preprint arXiv:1802.08474},
+	year={2018}
+}
+
+@inproceedings{no-op,
+	title={Ensuring Convergence and Invariants Without
+	Coordination},
+	author={Borrego, Dina and Preguiça, Nuno and Boix, Elisa Gonzalez and Ferreira, Carla},
+	booktitle={39th European Conference on Object-Oriented Programming (ECOOP 2025)}
+}
+
+
+
+
+

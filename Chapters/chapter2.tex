@@ -531,7 +531,8 @@ Replication is asynchronous and operation-based.
 PotionDB also employs sharding inside each server to leverage on multi-core CPUs.
 
 Finally, PotionDB supports multiple non-uniform and computational CRDTs, including some new ones we designed (e.g., max/min CRDT) and extensions (e.g., adding decrement support to TopSum CRDT).
-Their usefulness in PotionDB is discussed in Section \ref{subsec:views}.
+We discuss their usefulness in PotionDB in Chapter \ref{cha:research_statement}. \todo{Update this link to the correct section}
+%Their usefulness in PotionDB is discussed in Section \ref{subsec:views}.
 
 %TODO: Should a paragraph like the one below be here? Decide later after more text is rewritten.
 %All of the factors above come in together to answer PotionDB's main challenge - how to provide efficient, consistent views regarding global data, under weak consistency and without a single server having all required data. Furthermore, any queries to those views should have low latency and require only communication with a single server. %Maybe this paragraph should be in the views subsection instead.
@@ -567,33 +568,46 @@ Their usefulness in PotionDB is discussed in Section \ref{subsec:views}.
 \section{Data access}
 \label{sec:data_access}
 
-Most online services nowadays require storage solutions in order to support said services.
-Often, databases are leveraged on in order to store and provide an interface to access the service's data.
-E.g., in an e-commerce application, databases may be used to store the stocks of products, shopping carts, customer information, etc.
-It is expected for databases to provide an easy and quick access for data, while also managing how the data is stored and kept consistent.
+%Online services usually require storage solutions to store and manage application's data.
+Online services usually require storage solutions to hold their data.
+Databases are commonly used to store and manage an application's data, with different types of databases offering different guarantees (consistency, durability, etc.) and interfaces for data access.
 
-While many solutions for presenting data exist, two of the most common ones are key-value stores and relational databases.
+While there are many different kinds of database interfaces, the two most common ones are key-value stores and relational databases.
+Most alternatives can be defined as extensions, variants or subsets of these.
+
+
+
+%Most online services nowadays require storage solutions in order to support said services.
+%Often, databases are leveraged on in order to store and provide an interface to access the service's data.
+%E.g., in an e-commerce application, databases may be used to store the stocks of products, shopping carts, customer information, etc.
+%It is expected for databases to provide an easy and quick access for data, while also managing how the data is stored and kept consistent.
+%
+%While many solutions for presenting data exist, two of the most common ones are key-value stores and relational databases.
 
 \paragraph{Key-value stores.}
-Most key-value stores present a very simple interface with two basic operations - \emph{get} and \emph{put} \cite{dynamo, cops, cure, walter, pequod}.	%key-value stores
+Most key-value stores present a simple interface with two basic operations - \emph{get} and \emph{put} \cite{dynamo, cops, cure, walter, pequod}.	%key-value stores
 The former allows users to obtain the state of an object, while the latter updates or stores an object.
 Each object is accessed by providing a key that uniquely identifies it.
-Some databases only provide opaque objects, while others may provide more rich interfaces by supporting objects such as counters, maps and sets, alongside appropriate operations on those, or other features such as transactions \cite{cure, walter, pequod}.	%DBs providing extra objects/ops
+Some databases only provide opaque objects (i.e., registers), while others may provide richer interfaces by supporting objects such as counters, maps and sets, alongside appropriate operations on those, or other features such as transactions \cite{cure, walter, pequod}.	%DBs providing extra objects/ops
 PotionDB provides a key-value interface, with support for many different kinds of objects, operations, transactions and even for materialized views.
 
 \paragraph{Relational databases.}
-Relational databases provide a so-called relational model \cite{spanner, eiger, noria}. %DBs with relational model
+Relational databases provide a so-called relational model \cite{spanner, eiger, noria}.
 In relational databases, data is organized in tables, with possible relationships between tables and the columns of different tables.
 E.g., each entry in a table ``customers'' may refer to one or more entries in the table ``addresses''.
 Usually, columns represent the fields of a table, while each row represents one entry (data) in the table.
-Many systems provide SQL (\textbf{S}tructured \textbf{Q}uery \textbf{L}anguage) or a SQL-like language \cite{sequel, spanner, noria, mongoVScassandra} to define and access the data, which allows for a rich interface in accessing data and easy processing of said data.
-For example, with a SQL query, it is possible to obtain directly from the database the average of salaries of users in a given company.
-In comparison, in key-value stores, usually one would have to obtain multiple objects, calculate the average and then present the result, or store the pre-calculated result under some key.
+Many systems provide SQL (\textbf{S}tructured \textbf{Q}uery \textbf{L}anguage) or a SQL-like language \cite{sequel, spanner, noria, mongoVScassandra} to define and access data, which allowing for a rich interface for handling data. %Fix this.
+For instance, with a SQL query, it is possible to obtain directly from the database the average of salaries of users in a given company.
+Conversely, in key-value stores, usually one would need to read multiple objects, calculate the average and then present the result, or store the pre-calculated result under some key (and then keep it up-to-date manually).
 
-Key-value stores are easy to use due to their simple interface \cite{dynamo}. 
-Usually they offer weak forms of consistency, stressing on performance and fault tolerance \cite{dynamo, cops, cure}.
-On the other hand, relational databases have a richer interface, which eases application development \cite{spanner, noria, eiger}, but are tougher to design and optimize for, being mostly used by databases providing strong consistency.
-Some key-value stores provide extra features in order to facilitate application development by, e.g., providing many object types, extra operations, transactions \cite{cure, walter}.
+Key-value stores have a simple interface \cite{dynamo}, often offering weak consistency and stressing on performance and fault tolerance \cite{dynamo, cops, cure}.
+Conversely, relational databases' richer interface eases application development \cite{spanner, noria, eiger}, but are tougher to design and optimize for, being mostly used by databases providing strong consistency.
+Some key-value stores provide extra features to facilitate application development by, e.g., providing many object types, extra operations or transactions \cite{cure, walter}.
+
+%Key-value stores are easy to use due to their simple interface \cite{dynamo}. 
+%Usually they offer weak forms of consistency, stressing on performance and fault tolerance \cite{dynamo, cops, cure}.
+%On the other hand, relational databases have a richer interface, which eases application development \cite{spanner, noria, eiger}, but are tougher to design and optimize for, being mostly used by databases providing strong consistency.
+%Some key-value stores provide extra features in order to facilitate application development by, e.g., providing many object types, extra operations, transactions \cite{cure, walter}.
 
 \subsection{Queries}
 \label{subsec:queries}
@@ -606,26 +620,41 @@ Some key-value stores provide extra features in order to facilitate application 
 %This still maintains the ease of development and high performance of key-value stores, while also easening application development.
 %To achieve this, it is important to consider which kind of operations are often used by applications.
 Applications access data in different ways.
-Some mostly access the data directly, e.g., fetch information about a product in an e-commerce system.
+Some mostly access data directly, e.g., fetch information about a product in an e-commerce system.
 Others may require summaries, aggregations, sorting of data or even more complex processing.
 
-\textbf{O}n\textbf{l}ine \textbf{A}nalytical \textbf{P}rocessing, OLAP, is a method which consists on ways to analyse and organize data by executing analytical queries \cite{dbtoaster, viewSelection, optIncMaintenance, effMaintenance}.
-These kind of queries are often used in the context of marketing, financial report, business decisions and scientific data analysis.
-For example, in an e-commerce system, it may be useful to know the most popular products at any given moment, in order to keep their stock available and e.g. adjust prices or advertisement.
-This poses a challenge, as very large amounts of data need to be analysed (all sales), with updates often occurring (new sales, new products) and in short periods of time (information needs to be available fast to make a decision while it is still relevant).
-Views, indexes, windowed data and caches are some of the most common methods to provide these kind of queries \cite{noria, dbtoaster, pequod, txcache, viewSelection, optIncMaintenance, effMaintenance}.
-Operations such as table joins, sums/averages of data, sorts, limits, group by and others are used by this kind of queries. 
+%12. Try to reach 10?
 
-The TPC-H benchmark \cite{tpch, dbtoaster, partView, lazyMaintenance} provides a specific example for a database managing sales data which aims to provide useful information for business decisions.
-The queries listed in said benchmark provide a good example of the kind of queries executed in analytical scenarios.
-One key requirement of analytical queries nowadays is to provide useful information with queries of quick execution, while many updates are happening on the background.
+\textbf{O}n\textbf{l}ine \textbf{A}nalytical \textbf{P}rocessing, OLAP, is a method consisting on ways to analyse and organize data by executing analytical queries \cite{dbtoaster, viewSelection, optIncMaintenance, effMaintenance}, which are often used in the context of marketing, financial reports, business decisions and scientific data analysis. \todo{Is it clear to what is "which" refering to here? My intention: analytical queries}
+For instance, in an e-commerce system, it is useful to track the trending products in order to, e.g., adjust supply, prices or advertising.
+%For example, in an e-commerce system, it is useful to know the trending products at a given moment in order to, e.g., adjust supply, prices or advertisement.
+This is challenging as
+%This poses a challenge, as 
+very large volumes of data need to be analysed (all sales), with a constant stream of updates (new sales and products) and in a tight time frame (information must be quickly available to enable timely decisions).
+Common methods to provide analytical queries include views, indexes, windowed data and caches \cite{noria, dbtoaster, pequod, txcache, viewSelection, optIncMaintenance, effMaintenance}.
+%Views, indexes, windowed data and caches are some of the most common methods to provide these kind of queries \cite{noria, dbtoaster, pequod, txcache, viewSelection, optIncMaintenance, effMaintenance}.
+Operations such as table joins, sums/averages of data, sorts, limits, group by and others are often used by this kind of queries. 
+Current solutions face limitations, often requiring expensive infrastructures, slow query execution or having to accept staleness/coordination/inconsistencies \cite{noria, analyticdb, hadad, clickhouse, dbtoaster, slog}.
 
-\todo{Maybe the paragraph below, or parts of it, should be in the research statement}
-PotionDB is a geo-distributed database which aims to provide low latency for recurring queries.
-Analytic queries fit such criteria (e.g., checking the most sold products is a recurring query).
-We aim at providing such queries with a very low latency, similar to a normal query, while keeping the costs on storage low (partial + uniform replication).
-As of now, PotionDB already supports many different kinds of CRDTs, providing solutions to answer queries often executed in OLAP scenarios.
-Support for operations such as the ones referred before are already provided, and it is possible to support more if needed by adding new CRDTs to represent different kinds of objects or operations.
+
+
+%\textbf{O}n\textbf{l}ine \textbf{A}nalytical \textbf{P}rocessing, OLAP, is a method which consists on ways to analyse and organize data by executing analytical queries \cite{dbtoaster, viewSelection, optIncMaintenance, effMaintenance}.
+%These kind of queries are often used in the context of marketing, financial report, business decisions and scientific data analysis.
+%For example, in an e-commerce system, it may be useful to know the most popular products at any given moment, in order to keep their stock available and e.g. adjust prices or advertisement.
+%This poses a challenge, as very large amounts of data need to be analysed (all sales), with updates often occurring (new sales, new products) and in short periods of time (information needs to be available fast to make a decision while it is still relevant).
+%Views, indexes, windowed data and caches are some of the most common methods to provide these kind of queries \cite{noria, dbtoaster, pequod, txcache, viewSelection, optIncMaintenance, effMaintenance}.
+%Operations such as table joins, sums/averages of data, sorts, limits, group by and others are used by this kind of queries. 
+
+The TPC-H benchmark \cite{tpch, dbtoaster, partView, lazyMaintenance} provides a specific example of a database managing sales data which aims to provide useful information for business decisions.
+TPC-H's queries are a good example of the kind of queries executed in analytical scenarios.
+Nowadays, a key requirement of analytical queries is to provide useful information with queries of quick execution, with constant updates happening in the background.
+
+%\todo{Maybe the paragraph below, or parts of it, should be in the research statement}
+%PotionDB is a geo-distributed database which aims to provide low latency for recurring queries.
+%Analytic queries fit such criteria (e.g., checking the most sold products is a recurring query).
+%We aim at providing such queries with a very low latency, similar to a normal query, while keeping the costs on storage low (partial + uniform replication).
+%As of now, PotionDB already supports many different kinds of CRDTs, providing solutions to answer queries often executed in OLAP scenarios.
+%Support for operations such as the ones referred before are already provided, and it is possible to support more if needed by adding new CRDTs to represent different kinds of objects or operations.
  
 
 %Maybe end with a concluding note that later on more research can be done to find more types of applications/operations we may want to provide support for, or that PotionDB is extensible (e.g. - add more CRDTs)
@@ -639,42 +668,120 @@ Support for operations such as the ones referred before are already provided, an
 \subsection{Speeding up queries - views and indexes}
 \label{subsec:views}
 
-In order to provide applications with easier and quicker access to data, mechanisms have been studied to complement direct data access \cite{noria, dbtoaster, pequod, txcache, viewSelection, optIncMaintenance, effMaintenance, lazyMaintenance, genIndex, partIndex, dbproxy}. 
-Some of those mechanisms include usage of key-value stores as caches, indexes, views, data streaming, etc.
-\todo{I probably need something more here to finish the paragraph... suggestions?}
+In order to provide applications with simpler and quicker data access, several mechanisms have been studied to complement direct data access \cite{noria, dbtoaster, pequod, txcache, viewSelection, optIncMaintenance, effMaintenance, lazyMaintenance, lisa, bp-tree, bindex, dbproxy}, including indexes, views, data streaming, key-value stores as caches, etc.
+We describe here indexes and views, deferring caches and data streaming systems to Section \ref{subsec:existingSystems}.
+
+%pequod OK, 
+%genIndex, partIndex, effMaintenance
+%partIndex take out
+%genIndex take out.
+%others keep.
 
 \paragraph{Indexes.}
-An index is a record whose goal is to speed up how quickly data is found \cite{partIndex, genIndex, mongoVScassandra}. %Probably just need one or two citations that define an index/explain what it is for.
-In the context of a relational database, an index can be done on a column of a table to provide a quick way to access data by some criteria other than the primary key.
+An index is a record whose goal is to speed up how quickly data is found \cite{bp-tree, mongoVScassandra, lisa}.
+In relational databases, an index can be made on a column of a table to provide quick access to data by some criteria other than the primary key.
 E.g., an index on users' data may provide quick access by phone number.
-It can also be used to help group data in groups or sort more efficiently.
-In non-relational databases indexes can be useful too. For example, a map can store all the keys of users, and each key can then be used to directly access the data of a given user.
-In short, indexes are an useful and commonly used way to speed up queries and data access.
+It can also be used to help group data or sort more efficiently.
+In non-relational databases, indexes can be useful too - e.g., a map can store all users' keys, and each key can be used to directly 
+%access the data of a given user.
+access the respective user's data.
+In short, indexes are useful and commonly used to speed up queries and data access.
+
+%13
+%TODO: Check if some citations can be replaced with more recent citations from PotionDB paper (for both here and indexes)
 
 \paragraph{Views.}
 A view consists in a different way to present data.
-In the context of databases, it is defined as being the result of some query \cite{txcache}. %Definition of a view.
-Views can be used to filter data (e.g., only show users with age above a certain value), or to accommodate subqueries that may be used by other queries (e.g., a join of two tables in the case of a relational database).
-As such, they are useful for application developer, as it provides data abstraction by letting users define relationships between tables.
-These views are re-calculated every time they are used, thus they do not use storage space but require processing time when queried.
+In the context of databases, it is defined as the result of some query \cite{txcache}. %Definition of a view.
+Views can be used to filter data (e.g., only show users above a certain age), or to accommodate subqueries that may be used by other queries (e.g., in a relational database, a join of two tables).
+As such, they are useful for application developers, providing data abstraction by letting users define relationships between tables.
+Views are re-calculated every time they are used, thus they do not use storage space but require processing time when queried.
 Materialized views, on the other hand, are used with the goal of speeding up queries \cite{noria, pequod, txcache, partView, viewSelection, incMaintenance, effMaintenance, lazyMaintenance}. %Definition and goals of materialized views, preferably also downsides.
-Materialized views cache the results of a given query, thus they can provide much quicker access to data, avoiding having to re-execute certain queries all the time.
-However, it comes with its downsides - extra disk storage is needed and maintaining the views consistent and automatically updated is challenging, thus few systems implement them.
-View maintenance is a common research topic. \todo{I think this last sentence does not need a citation given what I already cited before, but I can list them all again} %Maybe just re-add citations speciallized on this.
+Materialized views cache the results of a given query, thus they can provide much quicker access to data \cite{parcur, hadad, marviq}, avoiding re-execution of certain queries all the time.
+However, it comes with its downsides - extra disk storage is needed and maintaining the views consistent and automatically updated is challenging \cite{oracleViews, dbsp, chronocache, birds, clickhouse}, thus few systems implement them.
+View maintenance is a common research topic \cite{noria, dbsp, oracleViews}.
 
-\todo{Not sure if the paragraph below should be here... or, at least, in this kind of form.}
-PotionDB proposes to provide support for materialized views with incremental view maintenance.
-Materialized views have the potential to speed up queries by multiple orders of magnitude \cite{partView, effMaintenance, lazyMaintenance}.
-Given PotionDB's geo-distributed, partial replicated nature, the main aim with materialized views is to provide quick and efficient access to data that, without a view, could imply a long and complex query execution across many servers.
-Another goal is to provide such views without requiring all the data referred by a view to be replicated everywhere, thus saving in storage and replication processing costs.
-The views themselves should, however, be replicated everywhere relevant to provide low latency access to them.
-This is thus a quite challenging and novel problem - to the best of our knowledge, PotionDB is the first system to propose providing materialized views in a geo-distributed, partially replicated, weakly consistent scenario.
-The challenge comes from multiple aspects.
-PotionDB's materialized views should have a low storage footprint compared to the data they refer.
-Also, views may refer to data that is spread across many servers, without a single server having all the data required to compute the entire view.
-Furthermore, it is essential for a view to be able to provide a reply to a query without executing complex computations or any communication (e.g., fetching data) with other servers.
-Finally, our views must also be kept up-to-date and provide causal consistency.
- \todo{Not sure if this part of ``without executing complex computations'' is clear.}
+%\todo{Not sure if the paragraph below should be here... or, at least, in this kind of form.}
+%PotionDB proposes to provide support for materialized views with incremental view maintenance.
+%Materialized views have the potential to speed up queries by multiple orders of magnitude \cite{partView, effMaintenance, lazyMaintenance}.
+%Given PotionDB's geo-distributed, partial replicated nature, the main aim with materialized views is to provide quick and efficient access to data that, without a view, could imply a long and complex query execution across many servers.
+%Another goal is to provide such views without requiring all the data referred by a view to be replicated everywhere, thus saving in storage and replication processing costs.
+%The views themselves should, however, be replicated everywhere relevant to provide low latency access to them.
+%This is thus a quite challenging and novel problem - to the best of our knowledge, PotionDB is the first system to propose providing materialized views in a geo-distributed, partially replicated, weakly consistent scenario.
+%The challenge comes from multiple aspects.
+%PotionDB's materialized views should have a low storage footprint compared to the data they refer.
+%Also, views may refer to data that is spread across many servers, without a single server having all the data required to compute the entire view.
+%Furthermore, it is essential for a view to be able to provide a reply to a query without executing complex computations or any communication (e.g., fetching data) with other servers.
+%Finally, our views must also be kept up-to-date and provide causal consistency.
+% \todo{Not sure if this part of ``without executing complex computations'' is clear.}
+ 
+ \subsection{Data safety}
+ \label{subsec:invariants}
+ \todo{Data safety or Invariants?}
+ 
+ %Before rewrite: 6+5+8 = 19
+ %After: 7+4+11= 22 :(
+ 
+Some applications require certain conditions to hold true at all times (i.e., invariants \cite{ipa, putting}) to function correctly 
+ - e.g., in a banking app, that an account's balance is >= 0.
+ Under strong consistency, this can be ensured by checking the balance before a withdrawal operation - however, this is burdensome and error-prone for developers, as real-world systems often have multiple invariants to keep.
+ Moreover, with weak consistency, checking the condition is not enough due to concurrent operations: e.g., two concurrent withdraws of 10€ may succeed on a 15€ balance, %as each server's state shows enough balance available.
+ as both withdraws see enough balance available.
+ 
+ As invariants are essential for application correctness, much research has been done towards detecting conflicting operations and automatically holding invariants \cite{putting, avoidence, pnuts, strongenough, finegrained, boundedconcurrency}, with a focus on reducing required coordination.
+ However, most solutions still require coordination (i.e., strong consistency) for operations that can potentially conflict.
+ 
+ More recent research \cite{boundedCounter, antidotesql, ipa, no-op} attempts to bring invariants to weak consistency scenarios.
+ Escrow techniques \cite{boundedCounter, escrow} enable sync-free execution until a certain limit at each replica, 
+ %after which synchronization may be needed to reset the limit.
+ albeit synchronization is required to reset the limit.
+ This is suitable for numeric invariants and is supported by PotionDB through the Bounded Counter \cite{boundedCounter}. %TODO: Maybe not needed if I mention it later again.
+ Antidote SQL and IPA \cite{antidotesql, ipa} propose two different approaches for upholding uniqueness, referential integrity and disjunction invariants.
+ Very recently, Borrego et. al. \cite{no-op} propose the No-Op framework, leveraging on CRDTs to disable the effects of conflicting operations.
+ It handles common kinds of invariants and is very expressive, but lacks scalability.
+ Numerical and aggregation invariants are still challenging - IPA and No-Op struggle with them, being extremely restrictive on the concurrency allowed.
+ Antidote SQL avoids this issue by using escrow techniques, however coordination is required in certain situations.
+%IPA and No-Op struggle with numerical and aggregation invariants, often being extremely restrictive on the concurrency allowed. 
+%Antidote SQL avoids this issue by using escrow techniques. 
+ 
+ %%%%%
+ 
+% Some applications require certain conditions to hold true to ensure correct behaviour.
+% For example, in a banking application, we would want to prevent two withdraws of 10€ from executing on an account with 15€, as the resulting balance would be negative.
+% Under strong consistency, the application can prevent this by checking the balance before each withdraw operation.
+% However, this burdens developers and is error-prone, specially as in real-world systems, there are often many conditions to maintain.
+% 
+% To ease developer's burden, some systems support invariants \cite{putting} - conditions that must hold true at all times.
+% If an operation would violate an invariant, it is not executed.
+% Invariants are thus used to ensure application correctness - for instance, in our example, an invariant stating balance >= 0.
+% More invariants could be defined, e.g., that accounts have an associated customer, and said customer exists.
+% 
+%% To ease developer's burden, some systems support invariants.
+%% An invariant is a condition that must hold true at all times - if an operation would break the invariant, the operation would not be executed.
+%% Invariants are thus used to ensure application correctness - in the banking example, we would define an invariant stating balance >= 0.
+%% More invariants could be defined, e.g., that an account must have a customer associated to it and that customer must exist.
+%
+% However, by default keeping invariants requires strong consistency \cite{avoidence}, as concurrent operations can easily break invariants - e.g., two concurrent withdraws of 10€ will both see a 15€ balance, leading to the final balance of -5€.
+% Bringing invariants to weakly consistent systems is therefore desirable.
+% Some research already exists in this area, e.g., a Bounded Counter \cite{boundedCounter}
+%  for numeric variants, or invariant confluence \cite{putting, avoidence} analysis to determine which operations need coordination to maintain invariants.
+% However, bringing other kinds of invariants (e.g., unique, referential integrity) to weak consistency, specially without or with limited coordination, is still an open research direction.
+ 
+ %putting
+ %putting consistency back into eventual consistency
+ %avoidence
+ %coordination avoidance in database systems
+ 
+ % - however, this is not possible under weak consistency, as the withdraws may be concurrent.
+ 
+ %Data correctness/invariants is mostly focused on strongly consistent systems
+ %Important for critical systems, e.g., banking
+ %Essential for the correct execution of many applications
+ 
+ %Invariants are conditions that must always hold true
+ %They state important properties about the correctness of the system (e.g., balance > 0, all accounts have a client associated to it.)
+ %Mostly strong-consistency
+ %Mention bounded-counter and similar
 
 \subsection{Existing systems}
 \label{subsec:existingSystems}
@@ -778,6 +885,7 @@ SLOG offers high throughput even under high contention,
 as well as automatic data remastering without considerable throughput impact.
 These properties come at a cost - clients cannot abort a transaction after submitting; transactions must be deterministic and must be fully known at the planning phase - i.e., dynamic transactions are not supported.
 
+
 %9
 %6
 
@@ -792,32 +900,52 @@ These properties come at a cost - clients cannot abort a transaction after submi
 %Other noteworthy features include the provision of high throughput even under high contention on data access, as well as automatic data remastering without hindering throughput considerably.
 %However, these features, alongside with low latency transactions, come at a cost - transactions must be deterministic; after a client submits a transaction the client cannot abort the transaction; transactions must be fully known during the planning phase, i.e., it does not support dynamic transactions.
 
-%TODO: For Dynamo, cut content if needed. It's not really that relevant, I'm mostly describing it because it's a "standard". Atm it has 13+6=19 lines, aim to ~12. (at worst 14)
 
-%Now it is at 10+4. Not bad!
+%14
+%9
+
+\paragraph{Caerus.} Caerus is a strongly consistent, geo-distributed deterministic database able to commit geo-distributed transactions with a single RTT, by leveraging on transaction's determinism and read-write sets.% to globally order transactions.
+%It uses transaction's determinism and read-write sets to globally order transactions with a single RTT.
+Furthermore, Caerus relies on data locality and primary regions to reduce latency of single region transactions.
+Single RTT commits in all scenarios is ingenious, albeit it comes with important limitations. 
+First, a single RTT can still be too slow in geo-distributed scenarios.
+Furthermore, fault tolerance is severely limited - to achieve low latency for single region, the authors limited fault tolerance to a single region, which is unrealistic due to network partitions.
+Finally, pre-emptively knowing read-write sets of transactions is not always feasible.
+
+%\paragraph{Caerus.} Caerus is a strongly consistent, geo-distributed, deterministic database system that is able to commit geo-distributed transactions with a single RTT. 
+%It leverages on transaction determinism and knowing beforehand read+write sets of transactions in order to be able to globally order transactions with a single RTT. 
+%Furthermore, they rely on data locality and primary regions in order to reduce latency of single-region (or few-region) transactions. 
+%Usage of locality to considerably reduce transaction latency is noteworthy and further proves the relevance of partial replication in PotionDB. 
+%Furthermore, while strong consistency with a single RTT in all scenarios is ingenious, it comes with some important limitations - first, a single RTT can still be too slow for geo-distributed scenarios. 
+%Furthermore, fault tolerance is severely limited - in order to achieve low latency (6ms) for single-region, it was necessary to limit fault tolerance to a single region failure - which is unrealistic due to network partitions. 
+%Finally, knowing read-write sets of transactions is not an easy problem nor always achievable. PotionDB has no such requirements or limitations.
+%%(Note to self: not totally true @ PotionDB has no such requirements or limitations as our fault tolerance is… not good either. We can lose transactions due to not waiting.)
+
+%12
+%9
+
+\paragraph{Detock.} Similarly to Caerus, Detock proposes to use data locality and transaction determinism to provide strongly consistent, low latency single-region transactions and single RTT multi-region commits.
+Detock's transactional protocol also leverages on dependency graphs and deterministic deadlock resolution.
+%Detock also leverages on dependency graphs and deterministic deadlock resolution to achieve strong consistency with a single RTT.
+However, to keep latency low, replication is only synchronous within a region, so a whole region failure (or network partition) may render data unavailable.
+Their evaluation only considers single and two region transactions, which is unrealistic when worldwide or statistical queries are considered.
+Additionally, throughput (but not safeness) is influenced by clock skew.
+Finally, they do not support partial replication, leading to high replication costs.
+
+%\paragraph{Detock.} Similarly to SLOG, Detock proposes to use data locality and determinism to provide low latency single-region transactions. It shares similar weakness, limitations and strong points with SLOG. However, very importantly, they achieve single RTT cross-region transactions, considerably decreasing those transactions’ latency over SLOG and other solutions. They leverage on determinism, alongside dependency graphs and deterministic deadlock resolution to achieve strongly consistent transaction executions across data centers, without extra coordination. However, to keep latency low, Detock only replicates synchronously within a region, so a whole region failure (or network partition) may make data unavailable. Their evaluation only considers single and two region transactions, which is unrealistic when considering queries regarding global data or statistical data. Their performance is also affected by clock skew, and data is still asynchronously replicated everywhere, leading to high replication costs.
 
 \paragraph{Dynamo.} Dynamo \cite{dynamo} is a weakly consistent, highly available key-value store designed by Amazon.
 It provides eventual consistency with a simple get/put interface.
-Dynamo leverages on multiple features to achieve low latency and to be resilient at large scale.
-Data is partitioned with a zero-hop DHT, and every node knows how to reach every data item.
-Dynamo embraces hardware heterogeneity - powerful servers represent multiple nodes.
-Each object is replicated in N nodes, and reads/writes involve R/W replicas - these parameters are configurable for different trade-offs of performance and safety.
-Dynamo detects write conflicts and keeps all conflicting versions - on a read, Dynamo returns the conflicting versions for the application to merge.
-The authors claim in their practical experience, state divergence rarely happens.
+Dynamo leverages on several features to achieve low latency and large scale resilience.
+Data is partitioned with a zero-hop DHT - every node knows how to reach all data items.
+Dynamo embraces hardware heterogeneity - powerful servers act as multiple nodes.
+Each object is replicated in N nodes, while reads/writes involve R/W replicas - these parameters are configurable for different performance and safety trade-offs.
+Dynamo detects write conflicts and keeps all conflicting versions, returning them on read for the application to merge.
+According to Amazon's practical experience, state divergence rarely happens.
 
-Dynamo applies a fully decentralized P2P structure.
-Gossip is used for membership changes, failure detection and building the DHT.
+Dynamo applies a fully decentralized P2P structure, with gossip used for membership changes, failure detection and building the DHT.
 Dynamo focuses on 99.9\% latency, while ensuring resilience, high availability and data durability.
-However, eventual consistency, no automatic data merge or object abstracts makes it hard to develop for Dynamo.
-
-%ChatGPT
-Dynamo. Dynamo \cite{dynamo}, designed by Amazon, is a weakly consistent, highly available key-value store offering eventual consistency via a simple get/put interface.
-It achieves low latency and large-scale resilience through several features: zero-hop DHT partitioning (every node can reach any data item), support for hardware heterogeneity (powerful servers act as multiple nodes), and configurable replication (each object is stored on N nodes, with reads/writes involving R/W replicas to balance performance and safety).
-
-Dynamo detects write conflicts and returns all conflicting versions for application-level resolution, though the authors report state divergence is rare in practice.
-It uses a fully decentralized P2P architecture, with gossip for membership, failure detection, and DHT maintenance.
-Dynamo emphasizes 99.9% latency, resilience, availability, and durability.
-However, its eventual consistency, lack of automatic conflict resolution, and absence of object abstractions make it challenging for developers.
+However, eventual consistency, no automatic data merge or object abstractions makes it hard to develop for Dynamo.
 
 
 %\paragraph{Dynamo.} Dynamo \cite{dynamo} is a weakly consistent, highly available key-value store.
@@ -835,96 +963,185 @@ However, its eventual consistency, lack of automatic conflict resolution, and ab
 %Dynamo's structure allows it to provide low latency replies even at the 99.9\% percentile, while ensuring high availability and data durability.
 %However, providing only eventual consistency, having conflicts be merged by applications and no object abstractions increases the difficulty of developing applications that use Dynamo.
 
-\paragraph{COPS.} COPS \cite{cops} is a weakly consistent key-value store for the wide-area.
-COPS defines and provides causal+ consistency, with causal relationships possible even between objects in different servers (data can be partitioned inside a datacenter but not across datacenters).
-Read transactions are also provided in one of COPS' versions (COPS-GT) in order to read multiple objects in the same version.
 
-Operations are linearizable inside a datacenter, and causally consistent across datacenters.
-Extra metadata is stored in the database for the COPS-GT version, with multiple efforts for garbage collection in both COPS and COPS-GT.
-However, providing read transactions comes at a cost - in some scenarios, COPS-GT has lower throughput compared to COPS.
-Also, COPS-GT's metadata size may grow unbound under network partitions, has some garbage collection mechanisms can only happen when all datacenters can communicate with each other.
-The lack of write transactions, read+write transactions and more rich objects are some shortcomings the authors address in Eiger \cite{eiger}.
-Neither COPS nor Eiger offer support for partial replication across datacenters.
+\paragraph{COPS.} COPS \cite{cops} is a weakly consistent key-value store for the wide-area.
+COPS defines and provides causal+ consistency. 
+Data is sharded within each data center (but not across), and causal relationships are supported between objects in different shards.
+An extension, COPS-GT, provides read transactions for reading multiple objects in the same version.
+
+Operations in a datacenter are linearisable, and causally consistent across datacenters.
+As COPS require significant metadata (COPS-GT requires even more), the authors employ multiple garbage collection techniques.
+Providing read transactions comes at a cost - COPS-GT has reduced throughput compared to COPS in some scenarios, and COPS-GTs metadata may grow unbound under network partitions.
+The authors address the lack of write transactions, read+write transactions and richer datatypes in Eiger \cite{eiger}.
+However, neither COPS nor Eiger offer partial replication.
+
+%\paragraph{COPS.} COPS \cite{cops} is a weakly consistent key-value store for the wide-area.
+%COPS defines and provides causal+ consistency, with causal relationships possible even between objects in different servers (data can be partitioned inside a datacenter but not across datacenters).
+%Read transactions are also provided in one of COPS' versions (COPS-GT) in order to read multiple objects in the same version.
+%
+%Operations are linearizable inside a datacenter, and causally consistent across datacenters.
+%Extra metadata is stored in the database for the COPS-GT version, with multiple efforts for garbage collection in both COPS and COPS-GT.
+%However, providing read transactions comes at a cost - in some scenarios, COPS-GT has lower throughput compared to COPS.
+%Also, COPS-GT's metadata size may grow unbound under network partitions, has some garbage collection mechanisms can only happen when all datacenters can communicate with each other.
+%The lack of write transactions, read+write transactions and more rich objects are some shortcomings the authors address in Eiger \cite{eiger}.
+%Neither COPS nor Eiger offer support for partial replication across datacenters.
 
 \todo{Should I describe Cure in higher detail since PotionDB is based on Cure?}
-\paragraph{Cure.} Cure \cite{cure} is a key-value store providing causal consistency with geo-replication.
+\paragraph{Cure.} Cure \cite{cure} is a geo-replicated key-value store providing causal consistency.
 Cure focus on being always available while still providing as many guarantees and ease of use as possible.
-Namely, it provides highly available, causally consistent transactions (both read, write and mixed), with clients reading a consistent snapshot.
-It also provides CRDTs representing many different data types and with different, automated, ways of solving conflicts, unlike many other datastores only offering registers.
-The combination of all these features is novel.
+Cure provides highly available, causally consistent read-write transactions, with multiple data types implemented as CRDTs, offering a rich interface and automatic conflict solving.
+Cure employs optimizations to ensure non-blocking reads and that consecutive snapshots represent newer states even under failures.
+However, in some scenarios, performance is reduced compared to other solutions, and clients may block when switching to a different data center due to a failure.
+It also does not support partial replication nor other useful utilities such as views.
 
-Cure presents some optimizations to ensure non-blocking reads, as well as ensuring consecutive snapshots are increasingly more recent even under failures.
-However, under some scenarios performance is considerably lower than other solutions.
-Clients may have to wait when doing failover datacenters.
-It also does not support partial replication or other useful utilities such as views.	\todo{To be honest, I don't really know what to put here as a disadvantage.}
+%Namely, it provides highly available, causally consistent transactions (both read, write and mixed), with clients reading a consistent snapshot.
+%It also provides CRDTs representing many different data types and with different, automated, ways of solving conflicts, unlike many other datastores only offering registers.
+%The combination of all these features is novel.
 
-\paragraph{Walter.} Walter \cite{walter} is a geo-replicated key-value store with interesting semantics.
-Walter supports partial replication and makes usage of two interesting features: preferred sites, where writes of an object are more efficient; counting sets (csets), a set where all operations are commutative (similar to a set CRDT).
-Walter ensures no write-write conflicts are possible, thus not needing conflict resolution techniques.
-Transactions in a given site can be fast commited, without synchronization with other sites, if all objects updated either are csets or are preferred on said site.
-Thus with usage of data locality and csets, some applications may have good performance with Walter.
-However, any transaction updating an object in another preferred site falls back to 2PC, which is slow in geo-distributed scenarios and may block under partitions.
-Thus, if locality is not perfect, Walter suffers from similar downsides to strongly consistent systems.
-The authors also define Parallel Snapshot Isolation (PSI), by being an extension of SI where different sites can commit concurrently as long as no write conflicts occur.
+%Cure presents some optimizations to ensure non-blocking reads, as well as ensuring consecutive snapshots are increasingly more recent even under failures.
+%However, under some scenarios performance is considerably lower than other solutions.
+%Clients may have to wait when doing failover datacenters.
+%It also does not support partial replication or other useful utilities such as views.
 
-\paragraph{Noria.} Noria \cite{noria} is a streaming data-flow system aimed for web applications which tolerate eventual consistency.
-Noria focus on addressing common problems of both data-flow systems and databases, namely, windowed data for the former and materialized views for the latter.
-The main contribution is their partially-stateful data-flow model.
-This model allows to serve queries on all data, yet only maintain partial state on the operators.
-New entries are automatically added to the partial state, and unused entries evicted.
-To further save on memory usage, an extensive re-use of operators is applied.
-Noria addresses on how to efficiently provide queries and updates on such a system model.
+\paragraph{Walter.} Walter \cite{walter} is a geo-replicated key-value store with partial replication and PSI (see Section \ref{subsec:weak}) consistency.
+PSI itself is also defined in \cite{walter}.
+Walter deploys two interesting features: preferred sites, where writes of an object are more efficient; and counting sets (csets), a set where all operations are commutative (similar to set CRDTs).
+Transactions in a given site can be fast committed without synchronization if all updated objects are either csets or preferred on said site - thus, applications with good data locality and relying on csets may have good performance with Walter.
+However, transactions updating objects with different preferred sites fall back to 2PC, requiring multiple RTTs and being partition-prone - i.e., the same limitations as in strongly consistent systems.
+\todo{Should I add here a comment pointing out how Walter basically shows how useful commutativity is for avoiding synchronization?}
 
-Noria provides partially materialized views, which are incrementally maintained.
-The authors claim providing materialized views for every query is feasible with Noria. It is also claimed that application development is easier compared to a cache + database setup as there is no need for manual caching or ad-hoc tables to store intermediate results.
 
-Noria provides impressive performance, however it has its shortcomings.
-State eviction from partial state is random, which is sub-optimal.
-It does not support parametrized range queries (e.g., day > 10) nor multi-column joins; failures lead to inefficient recomputation of the data-flow.
-Only eventual consistency is provided unlike in many other highly available databases, making application development harder.
-Replication is also not addressed nor is geo-distribution, both essential to many web services nowadays.
-Sharding is supported but some cross-shard operations are inefficient.
+%
+%\paragraph{Walter.} Walter \cite{walter} is a geo-replicated key-value store with interesting semantics.
+%Walter supports partial replication and makes usage of two interesting features: preferred sites, where writes of an object are more efficient; counting sets (csets), a set where all operations are commutative (similar to a set CRDT).
+%Walter ensures no write-write conflicts are possible, thus not needing conflict resolution techniques.
+%Transactions in a given site can be fast commited, without synchronization with other sites, if all objects updated either are csets or are preferred on said site.
+%Thus with usage of data locality and csets, some applications may have good performance with Walter.
+%However, any transaction updating an object in another preferred site falls back to 2PC, which is slow in geo-distributed scenarios and may block under partitions.
+%Thus, if locality is not perfect, Walter suffers from similar downsides to strongly consistent systems.
+%The authors also define Parallel Snapshot Isolation (PSI), by being an extension of SI where different sites can commit concurrently as long as no write conflicts occur.
 
-\paragraph{ChronoCache.} ChronoCache \cite{chronocache} is a mid-tier (between client and database) caching system for geo-distributed scenarios.
-ChronoCache does not store only static data - it aims to store query results automatically and predict upcoming queries, executing them before they are issued by the client.
-Thus, by having ChronoCache located close to the clients, query predicting can lead to savings in long round-trips.
+%8+4+7=19
 
-ChronoCache does not use offline training.
-Instead, it analyses clients' patterns, grouping queries in dependency graphs and analysing correlations between queries.
-It also analyses odds of some queries being followed by others, as well as detecting queries issued in loops.
-In the latter, ChronoCache can predictively execute the whole loop after the first query of the loop is issued by the client.
+%7+9 = 16
+%This may need to be further trimmed down.
 
-ChronoCache can help speed up applications with constant access patterns.
-However, applications with considerable update ratios or with less repetitive access patterns may not benefit from ChronoCache as much as, e.g., from a materialized view.
-ChronoCache is also limited by the availability of the underlying database, thus network partitions may lead to a system halt.
+\paragraph{Noria.} Noria \cite{noria} is a streaming data-flow system for web applications that tolerate eventual consistency.
+Noria addresses limitations of both data-flow systems and databases, namely, windowed data for the former and materialized views for the latter.
+The main contribution is their partially-stateful data-flow model, allowing to only maintain partial operator state yet serve queries on all data.
+New entries are automatically added to the partial state while unused entries are evicted.
+Noria addresses how to efficiently provide queries and updates on such a system model.
 
-\paragraph{TxCache.} TxCache \cite{txcache} is a caching system focusing on providing strong consistency guarantees.
-Many caching solutions provide only eventual consistency.
-In contrast, TxCache provides snapshot isolation and causality guarantees.
-This is achieved by keeping track of the versions of each database item.
-Reads on TxCache are likely to be stale, but the user can set a staleness limit.
-TxCache always ensures a consistent, even if stale, snapshot view of the database, easing application development compared to other caching solutions (e.g., memcached) that do not even provide transactions.
-TxCache requires considerable modifications on the database in order to notify TxCache of data invalidity, as well as serve reads on a given version. Its API is, however, easy to use for applications, as applications only need to designate functions as "cacheable".
-Internally, TxCache keeps a cache of query results with a validity range for each result - this allows to know in which snapshots can each result be used on for future queries.
+Noria provides incrementally maintained, partially materialized views.
+The authors claim it is feasible to provide materialized views for every query with Noria.
+Noria delivers impressive performance, but with some shortcomings.
+First, state eviction from partial state is random, which is sub-optimal.
+Parametrized range queries (e.g., day > 10) and multi-column joins are unsupported.
+Replication and geo-distribution are not addressed - both essential for many web services nowadays.
+The authors claim application development is easier compared to cache + database setup, due to not needing manual caching - however eventual consistency complicates application development.
+Finally, some cross-shard operations are inefficient.
 
-TxCache has some considerable limitations.
-Read-write transactions execute directly on the database to avoid anomalies, thus take no benefit from caching.
-Only functions with no side effects, deterministic and not dependent on external factors (e.g., system time) can be cacheable (TxCache does not check this requirement, leading to possible development bugs).
-Required changes to the database may be difficult/lengthy, leading to potential bugs.
+%\paragraph{Noria.} Noria \cite{noria} is a streaming data-flow system aimed for web applications which tolerate eventual consistency.
+%Noria focuses on addressing common problems of both data-flow systems and databases, namely, windowed data for the former and materialized views for the latter.
+%The main contribution is their partially-stateful data-flow model.
+%This model allows to serve queries on all data, yet only maintain partial state on the operators.
+%New entries are automatically added to the partial state, and unused entries evicted.
+%To further save on memory usage, an extensive re-use of operators is applied.
+%Noria addresses on how to efficiently provide queries and updates on such a system model.
+%
+%Noria provides partially materialized views, which are incrementally maintained.
+%The authors claim providing materialized views for every query is feasible with Noria. It is also claimed that application development is easier compared to a cache + database setup as there is no need for manual caching or ad-hoc tables to store intermediate results.
+%
+%Noria provides impressive performance, however it has its shortcomings.
+%State eviction from partial state is random, which is sub-optimal.
+%It does not support parametrized range queries (e.g., day > 10) nor multi-column joins; failures lead to inefficient recomputation of the data-flow.
+%Only eventual consistency is provided unlike in many other highly available databases, making application development harder.
+%Replication is also not addressed nor is geo-distribution, both essential to many web services nowadays.
+%Sharding is supported but some cross-shard operations are inefficient.
+
+%15 (5+5+5)
+%11 (7+4)
+
+\paragraph{Chronocache.} ChronoCache \cite{chronocache} is a mid-tier caching system for geo-distributed scenarios.
+It stores query results automatically and attempts to predict upcoming queries, executing them before they are issued by clients.
+Clients connect directly to ChronoCache instances deployed on nearby edge nodes, reducing client latency.
+ChronoCache does not use offline training, instead analysing clients' query patterns, building dependency graphs and analysing correlations.
+%Instead, it analyses clients' patterns, grouping queries in dependency graphs and analysing correlations between queries.
+ChronoCache detects queries executed consecutively, as well as in loops, predictively executing multiple queries when one is issued by a client.
+%being able to predictively execute multiple queries when one is issued by a client.
+
+ChronoCache speeds up applications with constant access patterns.
+However, ChronoCache is not suited for applications with considerable update ratios or less repetitive access patterns.
+It is still dependent on the underlying database, so network partitions may halt the system.
+
+%\paragraph{ChronoCache.} ChronoCache \cite{chronocache} is a mid-tier (between client and database) caching system for geo-distributed scenarios.
+%ChronoCache does not store only static data - it aims to store query results automatically and predict upcoming queries, executing them before they are issued by the client.
+%Thus, by having ChronoCache located close to the clients, query predicting can lead to savings in long round-trips.
+
+%ChronoCache does not use offline training.
+%Instead, it analyses clients' patterns, grouping queries in dependency graphs and analysing correlations between queries.
+%It also analyses odds of some queries being followed by others, as well as detecting queries issued in loops.
+%In the latter, ChronoCache can predictively execute the whole loop after the first query of the loop is issued by the client.
+%
+%ChronoCache can help speed up applications with constant access patterns.
+%However, applications with considerable update ratios or with less repetitive access patterns may not benefit from ChronoCache as much as, e.g., from a materialized view.
+%ChronoCache is also limited by the availability of the underlying database, thus network partitions may lead to a system halt.
+
+%12+8=20
+%6+8=14
+
+\paragraph{TxCache.} Traditional caching solutions provide only eventual consistency and no transaction semantics.
+TxCache, by contrast, provides strong consistency, supporting transactions with snapshot isolation and causality guarantees.
+TxCache provides a consistent, albeit likely stale, view of the database.
+Users can set a staleness limit, and it is easy to use as applications only need to mark functions as "cacheable".
+TxCache internally keeps a validity range for each cached result to indicate which snapshots can results be used on.
+
+TxCache has considerable limitations.
+First, it requires significant database modifications to support reads on specific versions and notify TxCache of data invalidity.
+Read-write transactions execute directly on the database to avoid anomalies, thus taking no benefit from caching.
+Also, only deterministic functions with no side effects and independent of external factors can be cached, missing possible records that could be safely cached.
+Required database modifications are non-trivial.
 Index or sequential scan queries lead to cacheable data that will be invalidated with any update to relevant tables, despite possible conditions on the queries allowing for smarter eviction strategies.
 
-\paragraph{DBToaster.} DBToaster \cite{dbtoaster} is a database focused on managing large datasets with a constant update stream.
-Efficient support of analytical queries is desired, thus DBToaster focuses on long-running queries concerning large sets of data.
-DBToaster provides materialized views with incremental view maintenance, making usage of delta queries to efficiently keep the views up-to-date.
-Techniques are applied to automatically generate materialized views, potentially dividing a materialized view in many parts for efficiency.
-By making usage of delta-queries and view splitting, they define triggers which update most views in constant time for each update, avoiding costly loops and table joins.
-Query re-writing rules are also provided, alongside an heuristic optimizer that uses said rules to further optimize views and their maintenance.
+%\paragraph{TxCache.} TxCache \cite{txcache} is a caching system focusing on providing strong consistency guarantees.
+%Many caching solutions provide only eventual consistency.
+%In contrast, TxCache provides snapshot isolation and causality guarantees.
+%This is achieved by keeping track of the versions of each database item.
+%Reads on TxCache are likely to be stale, but the user can set a staleness limit.
+%TxCache always ensures a consistent, even if stale, snapshot view of the database, easing application development compared to other caching solutions (e.g., memcached) that do not even provide transactions.
+%TxCache requires considerable modifications on the database in order to notify TxCache of data invalidity, as well as serve reads on a given version. Its API is, however, easy to use for applications, as applications only need to designate functions as "cacheable".
+%Internally, TxCache keeps a cache of query results with a validity range for each result - this allows to know in which snapshots can each result be used on for future queries.
+%
+%TxCache has some considerable limitations.
+%Read-write transactions execute directly on the database to avoid anomalies, thus take no benefit from caching.
+%Only functions with no side effects, deterministic and not dependent on external factors (e.g., system time) can be cacheable (TxCache does not check this requirement, leading to possible development bugs).
+%Required changes to the database may be difficult/lengthy, leading to potential bugs.
+%Index or sequential scan queries lead to cacheable data that will be invalidated with any update to relevant tables, despite possible conditions on the queries allowing for smarter eviction strategies.
 
-DBToaster shows that it is possible to answer complex queries with materialized views and have affordable maintenance costs.
-However, some queries with nested aggregates still have to use full view rebuilding, as well as efficient support of aggregates other than sums.
-Queries with inequality joins will still need joins to update the view.
+%10+4
+%7+4
 
-\todo{Should I do some connection between DBToaster and PotionDB? In PotionDB we do incremental view maintenance too, but ad-hoc.}
+\paragraph{DBToaster.} DBToaster \cite{dbtoaster} is a database focused on managing large datasets with a constant update stream and long-running analytical queries.
+DBToaster provides materialized views with incremental view maintenance, which can be automatically generated and potentially split in parts for efficiency.
+By relying on delta-queries and view splitting, the authors define triggers which update most views in constant time per update, avoiding costly loops and table joins.
+Query re-writing rules are also provided alongside an heuristic optimizer to further optimize views and their maintenance.
+
+DBToaster shows that complex queries can be efficiently answered with materialized views and have affordable maintenance costs.
+However, some queries with nested aggregates still need to do a full view rebuild, and aggregates other than sum are not efficiently supported. % as well as efficient support of aggregates other than sums.
+Queries with inequality joins still need expensive joins to update the view.
+
+
+
+%\paragraph{DBToaster.} DBToaster \cite{dbtoaster} is a database focused on managing large datasets with a constant update stream.
+%Efficient support of analytical queries is desired, thus DBToaster focuses on long-running queries concerning large sets of data.
+%DBToaster provides materialized views with incremental view maintenance, making usage of delta queries to efficiently keep the views up-to-date.
+%Techniques are applied to automatically generate materialized views, potentially dividing a materialized view in many parts for efficiency.
+%By making usage of delta-queries and view splitting, they define triggers which update most views in constant time for each update, avoiding costly loops and table joins.
+%Query re-writing rules are also provided, alongside an heuristic optimizer that uses said rules to further optimize views and their maintenance.
+%
+%DBToaster shows that it is possible to answer complex queries with materialized views and have affordable maintenance costs.
+%However, some queries with nested aggregates still have to use full view rebuilding, as well as efficient support of aggregates other than sums.
+%Queries with inequality joins will still need joins to update the view.
 
 %Calvin (apparently an important/main reference for single RTT cross-DC transaction commit with strong consistency), Detock (if Detock, maybe replace over SLOG as there's similarities), Caerus (single RTT), 
 %Note: both SLOG and Detock are deterministic systems that assume knowing the whole transaction beforehand + need to know/derivate read/write set.
@@ -950,10 +1167,26 @@ Queries with inequality joins will still need joins to update the view.
 %- At the moment they have a low level library, which I'd argue is less convenient than our view specification.
 %- "We need creativity to find the right group structure"
 
-\paragraph{Caerus.} Caerus is a strongly consistent, geo-distributed, deterministic database system that is able to commit geo-distributed transactions in a single RTT. It leverages on transaction determinism and knowing beforehand read+write sets of transactions in order to be able to globally order transactions with a single RTT. Furthermore, they rely on data locality and primary regions in order to reduce latency of single-region (or few-region) transactions. Usage of locality to considerably reduce transaction latency is noteworthy and further proves the relevance of partial replication in PotionDB. Furthermore, while strong consistency with a single RTT in all scenarios is ingenious, it comes with some important limitations - first, a single RTT can still be too slow for geo-distributed scenarios. Furthermore, fault tolerance is severely limited - in order to achieve low latency (6ms) for single-region, it was necessary to limit fault tolerance to a single region failure - which is unrealistic due to network partitions. Finally, knowing read-write sets of transactions is not an easy problem nor always achievable. PotionDB has no such requirements or limitations.
-%(Note to self: not totally true @ PotionDB has no such requirements or limitations as our fault tolerance is… not good either. We can lose transactions due to not waiting.)
+\paragraph{DBSP.} In DBSP \cite{dbsp}, the authors define a model for incremental view maintenance by streaming database snapshots.
+A snapshot is defined as a cumulation of transactions.
+DBSP is expressive enough to support streaming window queries, queries on nested relations and recursive queries.
+Some SQL operators are efficiently supported, however common queries patterns (as seen TPC-H benchmark \cite{tpch}) such as joins, distinct and aggregations with group by are costly in DBSP.
+Furthermore, DBSP requires transaction linearisability and all data to be available, which is challenging and limiting for geo-replicated scenarios.
 
-\paragraph{Detock.} Similarly to SLOG, Detock proposes to use data locality and determinism to provide low latency single-region transactions. It shares similar weakness, limitations and strong points with SLOG. However, very importantly, they achieve single RTT cross-region transactions, considerably decreasing those transactions’ latency over SLOG and other solutions. They leverage on determinism, alongside dependency graphs and deterministic deadlock resolution to achieve strongly consistent transaction executions across data centers, without extra coordination. However, to keep latency low, Detock only replicates synchronously within a region, so a whole region failure (or network partition) may make data unavailable. Their evaluation only considers single and two region transactions, which is unrealistic when considering queries regarding global data or statistical data. Their performance is also affected by clock skew, and data is still asynchronously replicated everywhere, leading to high replication costs.
+\subsection{Data access in PotionDB}
+
+PotionDB adopts a key-value interface, but vastly extends it by supporting multiple rich CRDTs.
+PotionDB exposes to the clients multiple read and update operations appropriate for each CRDT type, including read operations of partial state (e.g., lookup(e) in a set).
+Furthermore, PotionDB provides highly available, causally consistent transactions. \todo{Should I mention here again PotionDB's consistency guarantees (PSI+cset)? I already mentioned this before at the end of Section 2.2. The motivation to mention it here again is to put it in comparison with the systems just mentioned before.}
+
+PotionDB focuses on supporting recurrent queries with very low latency, akin to reads on basic objects.
+Analytical and OLAP queries fit PotionDB's use case, as they are often recurring (e.g., checking the most sold products), benefit from low latency (e.g. to enable timely business decisions) and should ideally have negligible impact on the throughput and latency of other queries and updates.
+We propose to support this with materialized views that are automatically and incrementally maintained, even if the data referred by a view is partitioned across different data centers.
+We detail our solution in the next chapter.
+
+%OLAP, focus on recurring queries with low latency + analytic queries.
+%Materialized views.
+%Should I do any comparison with the existing systems? I could say something like we provide consistency similar to Cure, but with partial replication support, views and improved view maintenance compared to DBSP. But I think better not say something like that.
 
 
 %\section{Thoughts}

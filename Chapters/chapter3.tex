@@ -14,119 +14,200 @@
 %Notas reuniao: Usar o plano para a bolsa da FCT, re-fazendo o que ja foi feito/o que vai ser feito
 %Ainda sera preciso implementar outro mecanismo de control de versoes, mas o mais dificil ja esta
 
-\todo{Is this okay, or is this more like Introduction stuff?}
+Our work focuses on providing a scalable solution for data replication and management for a geo-distributed scenario.
+As discussed in Chapter \ref{cha:introduction}, existing systems face scalability, performance and cost issues due to ever growing user bases and data sizes. %TODO: I would like to mention specifically replication costs. Or no need?
+In Chapter \ref{cha:research_context}, we highlighted several techniques and algorithms that can be used to address these limitations, e.g. partial replication, non-uniform replication, causal consistency, etc.
+Moreover, analytical queries are essential nowadays to enable timely business decisions, requiring real-time analysis of large data volumes without visible system impact.
+%which require analysing large amounts of data while the system is still running.
+%However, as noted in Section \ref{sec:data_access}, current solutions tend to have unacceptable drawbacks, such as 
+However, as noted in Section \ref{sec:data_access}, current solutions suffer from severe drawbacks, such as
+\begin{enumerate*}[label=(\roman*)]
+\item using stale, incomplete or even inconsistent data; 
+\item slow query execution or with impact on system performance;
+\item expensive infrastructures;
+\item costly synchronization, etc.
+\end{enumerate*}
 
-In this work we propose to address the issue of serving large-scale analytic queries efficiently in a geo-distributed scenario.
-As discussed previously in Section \ref{subsec:queries}, some systems attempt to address this.
-However, each of those systems presents some of the following shortcomings: costly view maintenance, limited amounts of data (e.g. data of last week), very stale data, costly queries, high storage costs, all data of a view having to be present in one server, etc.
+We plan to address the aforementioned challenges alongside others discussed in the following sections.
+We propose a multi-layered solution that will interleave both existing algorithms and techniques, as well as novel ones that we will design and propose.
+Our vision is to empower global-scale web applications that deploy multiple geo-distributed data centers with a scalable solution.
+We aim to minimize replication costs through data locality, partial replication and non-uniform replication, which together with casual consistency will enable cross data center scalability.
+Within each data center, scalability will is ensured through sharding.
+Additionally, our solution will answer recurring analytical queries with very low latency and without disrupting ongoing operations, by leveraging on materialized views.
+Our materialized views will be automatically and incrementally maintained - even over partitioned data -  for ease of use and efficiency.
+%as well as support partitioned data.
 
-As the number of data-centers increases, so do the costs of using full replication.
-As discussed previously in Chapter \ref{cha:introduction}, some applications have locality in their data and thus do not require all data to be replicated everywhere.
-However, it is still needed to support analytical queries which concern data from all over the globe (e.g., top 10 most sold products worldwide in an e-commerce application).
-These queries should be fast, in order to allow timely, well-informed business decisions to be made.
+%We propose a solution to this with our algorithms and a database implementation, PotionDB.
+%PotionDB is a distributed, geo-replicated database being developed in the context of this work, implementing the techniques and algorithms that we design.
+%Thus, PotionDB will be used to both demonstrate and evaluate our concepts.
+%At the end, PotionDB should demonstrate our vision, providing a scalable database for a geo-replicated service which serves both application and analytical queries efficiently, while also handling updates and ensuring low latency.
 
-%As discussed previously in Chapter \ref{cha:introduction}, by leveraging on data locality and partial replication, it is possible for each datacenter to replicate different subsets of data, thus reducing storage, network and processing costs.
-%In our work we also tackle this problem by designing our algorithms to work under partial replication.
-%Most importantly, the support for partial replication should not come at a cost of expressiveness or effectiveness or analytical queries - we must efficiently support queries that may span global data, without requiring any datacenter to replicate all the necessary data.
 
-%Furthermore, with the increase in the number of datacenters, it is essential to efficiently support partial replication to save on storage, network and computation costs.
-%This should not, however, come at the cost of functionality - mainly, it must still be possible to efficiently serve analytic queries concerning global data.
+We highlight the novelty of supporting materialized views in a geo-distributed, weakly consistent and partially replicated setting.
+This is particularly challenging not only due to weak consistency, but also as our views must be able to relate to data that is partially replicated, 
+even if no single server has all required data to compute the view.
+Finally, combining partial replication with non-uniform replication and causal consistency is also novel, as is the integration of views with those.
+Notably, our views will enable complex, recurring analytical queries concerning large sums of partially replicated data to run with latency comparable to basic object reads.
 
-In this work we aim to propose algorithms and techniques that address the mentioned shortcomings, allowing for a system to provide analytical queries efficiently, alongside ``normal'' queries of an application.
-This allows for the system to serve the needs of an application while allowing business analysts to get statistics of the system in real time, without affecting the functioning of the application.
-A crucial goal of our work is ensuring analytical queries concerning global data execute efficiently under partial replication.
-Partial replication is essential to ensure system costs stay reasonable and allow the system to scale further.
+All contributions resulting from our work will be implemented in PotionDB, a geo-distributed replicated database being developed in the context of this work.
+PotionDB will be used both to showcase our concepts  and to evaluate their performance.
+At the end, PotionDB should demonstrate our vision and the viability of our proposed solutions.
 
-We envision a situation in which large-scale web applications deploy many datacenters scattered around the world (geo-distributed), possibly in the cloud, in which analytical queries are expected to be executed quickly without stopping the system, enabling relevant business or data-load decisions.
-%It is thus necessary to study how can a system scale in this scenario, ensuring low latency for clients, high throughput, good fault tolerance and useful consistency guarantees, all while keeping system costs reasonable.
-We propose a solution to this with our algorithms and a database implementation, PotionDB.
-PotionDB is a distributed, geo-replicated database being developed in the context of this work, implementing the techniques and algorithms that we design.
-Thus, PotionDB will be used to both demonstrate and evaluate our concepts.
-At the end, PotionDB should demonstrate our vision, providing a scalable database for a geo-replicated service which serves both application and analytical queries efficiently, while also handling updates and ensuring low latency.
+In the next sections we detail each of our contributions and the main pillars of work needed to achieve our goals.
+First, Section \ref{sec:views_research_statement} describes the requirements and our solution for efficient support of recurring analytical queries through materialized views.
+Afterwards, Sections \ref{sec:replication_algorithm} and \ref{sec:transactional_algorithm} describe, respectively, our replication and transactional algorithms.
+Section \ref{sec:version_management} describes our new solution for version management, essential to ensure data consistency.
+Section \ref{sec:consistency_levels} describes our plans to support different consistency guarantees for views and objects, as well as data safety.
+Finally, \ref{sec:contributions} summarizes our contributions, both the ones already achieved and expected ones.
 
-In the next sections we detail our contributions and main pillars of work needed to achieve our goals.
-First, Section \ref{sec:views_research_statement} describes our solution for supporting recurring, analytical queries by deploying materialized views, as well as what supporting them implies in the replication and transactional algorithms.
-Afterwards, Sections \ref{sec:replication_algorithm} and \ref{sec:transactional_algorithm} describe the two mentioned algorithms.
-Then, Section \ref{sec:version_management} describes our new solution for version management, essential to ensure the consistency of the data.
-Section \ref{sec:consistency_levels} describes our intentions/ideas to support different consistency guarantees for views and objects.
-Finally, \ref{sec:contributions} summarizes our contributions, both the ones already achieved and future ones.
 
-%The next subsections are organized as follows.
-%First, Section \ref{sec:choices_and_motivation} motivates our design choices and algorithms.
-%Then, Sections \ref{sec:replication_model}, \ref{sec:views_research_statement} and \ref{sec:version_management} each present one of our core contributions, the problems they try to solve and how we solve them.
-%Section \ref{sec:potiondb_structure} presents PotionDB's architecture and details on our transactional algorithm.
-%Section \ref{sec:potiondb_evaluation} discusses how we evaluate PotionDB and plan to keep evaluating.
-%Finally, Section \ref{sec:contributions} summarizes the current contributions, while Section \ref{sec:next_steps} discusses the next directions for this work, current limitations and upcoming contributions.
 
-%\todo{Do I need to talk about how the algorithm for committing transactions works in detail? I lightly talk about it in Section \ref{sec:potiondb_structure}}
 
-%\todo{Where should I mention about the support for querying/updating objects that are replicated in different servers (e.g., client contacts server A, objects are in server B). I feel like that is important to mention, but it is not essential to any of PotionDB's algorithms - we provide it for completeness mostly.}
+
+
+%\todo{Is this okay, or is this more like Introduction stuff?}
+%
+%In this work we propose to address the issue of serving large-scale analytic queries efficiently in a geo-distributed scenario.
+%As discussed previously in Section \ref{subsec:queries}, some systems attempt to address this.
+%However, each of those systems presents some of the following shortcomings: costly view maintenance, limited amounts of data (e.g. data of last week), very stale data, costly queries, high storage costs, all data of a view having to be present in one server, etc.
+%
+%As the number of data-centers increases, so do the costs of using full replication.
+%As discussed previously in Chapter \ref{cha:introduction}, some applications have locality in their data and thus do not require all data to be replicated everywhere.
+%However, it is still needed to support analytical queries which concern data from all over the globe (e.g., top 10 most sold products worldwide in an e-commerce application).
+%These queries should be fast, in order to allow timely, well-informed business decisions to be made.
+%
+%%As discussed previously in Chapter \ref{cha:introduction}, by leveraging on data locality and partial replication, it is possible for each datacenter to replicate different subsets of data, thus reducing storage, network and processing costs.
+%%In our work we also tackle this problem by designing our algorithms to work under partial replication.
+%%Most importantly, the support for partial replication should not come at a cost of expressiveness or effectiveness or analytical queries - we must efficiently support queries that may span global data, without requiring any datacenter to replicate all the necessary data.
+%
+%%Furthermore, with the increase in the number of datacenters, it is essential to efficiently support partial replication to save on storage, network and computation costs.
+%%This should not, however, come at the cost of functionality - mainly, it must still be possible to efficiently serve analytic queries concerning global data.
+%
+%In this work we aim to propose algorithms and techniques that address the mentioned shortcomings, allowing for a system to provide analytical queries efficiently, alongside ``normal'' queries of an application.
+%This allows for the system to serve the needs of an application while allowing business analysts to get statistics of the system in real time, without affecting the functioning of the application.
+%A crucial goal of our work is ensuring analytical queries concerning global data execute efficiently under partial replication.
+%Partial replication is essential to ensure system costs stay reasonable and allow the system to scale further.
+%
+%We envision a situation in which large-scale web applications deploy many datacenters scattered around the world (geo-distributed), possibly in the cloud, in which analytical queries are expected to be executed quickly without stopping the system, enabling relevant business or data-load decisions.
+%%It is thus necessary to study how can a system scale in this scenario, ensuring low latency for clients, high throughput, good fault tolerance and useful consistency guarantees, all while keeping system costs reasonable.
+%We propose a solution to this with our algorithms and a database implementation, PotionDB.
+%PotionDB is a distributed, geo-replicated database being developed in the context of this work, implementing the techniques and algorithms that we design.
+%Thus, PotionDB will be used to both demonstrate and evaluate our concepts.
+%At the end, PotionDB should demonstrate our vision, providing a scalable database for a geo-replicated service which serves both application and analytical queries efficiently, while also handling updates and ensuring low latency.
+%
+%In the next sections we detail our contributions and main pillars of work needed to achieve our goals.
+%First, Section \ref{sec:views_research_statement} describes our solution for supporting recurring, analytical queries by deploying materialized views, as well as what supporting them implies in the replication and transactional algorithms.
+%Afterwards, Sections \ref{sec:replication_algorithm} and \ref{sec:transactional_algorithm} describe the two mentioned algorithms.
+%Then, Section \ref{sec:version_management} describes our new solution for version management, essential to ensure the consistency of the data.
+%Section \ref{sec:consistency_levels} describes our intentions/ideas to support different consistency guarantees for views and objects.
+%Finally, \ref{sec:contributions} summarizes our contributions, both the ones already achieved and future ones.
+%
+%%The next subsections are organized as follows.
+%%First, Section \ref{sec:choices_and_motivation} motivates our design choices and algorithms.
+%%Then, Sections \ref{sec:replication_model}, \ref{sec:views_research_statement} and \ref{sec:version_management} each present one of our core contributions, the problems they try to solve and how we solve them.
+%%Section \ref{sec:potiondb_structure} presents PotionDB's architecture and details on our transactional algorithm.
+%%Section \ref{sec:potiondb_evaluation} discusses how we evaluate PotionDB and plan to keep evaluating.
+%%Finally, Section \ref{sec:contributions} summarizes the current contributions, while Section \ref{sec:next_steps} discusses the next directions for this work, current limitations and upcoming contributions.
+%
+%%\todo{Do I need to talk about how the algorithm for committing transactions works in detail? I lightly talk about it in Section \ref{sec:potiondb_structure}}
+%
+%%\todo{Where should I mention about the support for querying/updating objects that are replicated in different servers (e.g., client contacts server A, objects are in server B). I feel like that is important to mention, but it is not essential to any of PotionDB's algorithms - we provide it for completeness mostly.}
 
 \section{Recurring Queries and Views}
 \label{sec:views_research_statement}
 
 In this work we aim to provide algorithms and a system in which recurring, analytical queries execute in near real-time alongside other ``normal'' queries.
-Analytical queries may require the analysis of millions of data objects to compute the answer, thus dedicated solutions are required.
+Analytical queries may require the analysis of millions of data objects to compute the answer, thus a dedicated solution is required.
 
-We propose to make usage of materialized views as an answer for analytic queries.
-A materialized view contains the data required to answer a query, without having to analyse much data or do complex calculations to execute the query.
-Bringing materialized views to a weak-consistency, geo-distributed scenario is novel to the best of our knowledge, and introduces the following main problems:
+%We propose to make usage of materialized views as an answer for analytic queries.
+%A materialized view contains the data required to answer a query, without having to analyse much data or do complex calculations to execute the query.
+%Bringing materialized views to a weak-consistency, geo-distributed scenario is novel to the best of our knowledge, and introduces the following main problems:
 
-\begin{itemize}
-	\item Views must be kept up-to-date efficiently - an update to one object should not imply a total rebuild of a view;
-	\item Storage and update cost of views should be minimized when possible - as was seen in Section \ref{sec:data_access}, both have been a problem with adopting materialized views in commercial databases and is an hot topic of research.
-	\item Access to views must be efficient - queries to views should be in same order of complexity as queries to other objects.
-	Thus, the required data to reply queries of views should be readily available without any complex or time-consuming calculations.
-	\item Changes to objects and their related views must be atomic - it should not be possible, in the same transaction, for a client to observe a state in which the object was already updated but one or more of its views were not. Views must stay consistent with the objects they refer to;
-	\item Views must be updated even for entries whose objects are not locally replicated, without breaking causality.
+We propose using materialized views to answer analytical queries.
+A materialized view contains a precomputed answer to a query, thus avoiding extensive data analysis or complex calculations. 
+Bringing materialized views to a weakly consistent, geo-distributed setting is novel to the best of our knowledge, and introduces the following main challenges:
 
-\end{itemize}
+\begin{enumerate}
+	\item Views must be kept up-to-date efficiently - an update to one object should not lead to a total rebuild of a view; 
+	\item Access to views must be efficient - querying a view should have the same order of complexity as querying other objects.
+	Thus, all required data should be readily available without any complex or time-consuming computations or communications;
+	\item Storage and update cost of views must be minimized - as discussed in Section~\ref{sec:data_access}, both factors have hindered the adoption of materialized views in commercial databases and remain an hot topic of research;
+	%\item Storage and update cost of views should be minimized as much as possible - as was seen in Section \ref{sec:data_access}, both have been a liability with adopting materialized views in commercial databases and is an hot topic of research.
+%	\item Access to views must be efficient - queries to views should be in same order of complexity as queries to other objects.
+	%Thus, the required data to reply to queries of views should be readily available without any complex or time-consuming calculations or communication.
+	\item \label{item:objviewconsistency} Changes to objects and their related views must be atomic - it should not be possible, in the same transaction, for a client to observe a state in which the object was already updated but one or more of its views were not (and vice-versa). Views must stay consistent at all times with the objects they refer to;
+	\item In each server where a given view is replicated, the view must reflect all updates to it even for entries whose objects are not locally replicated, without breaking causality.
+	%\item In each server, views must reflect all updates even for entries whose objects are not locally replicated, without breaking causality.
+	%\item Views must be updated even for entries whose objects are not locally replicated, without breaking causality
+\end{enumerate}
+%TODO: Consider changing the itemize to an enumerate, for easier referencing on the explanation below.
+
 %Mention they are objects like any other, but are updated automatically
 
 We tackle the aforementioned problems as follows.
-To keep views up-to-date efficiently, we rely on incremental view maintenance - more precisely, an update to an object generates one update for each relevant view, which changes just the necessary data in the view without having to recalculate it from the ground up.
-In our prototype of PotionDB, views are implemented as CRDTs like the remaining objects - thus updating a view corresponds to a CRDT update.
-Since views are CRDTs, queries are also quick - the necessary data to access the query is already present and should be supported by employing an appropriate CRDT.
+To keep views up-to-date efficiently, we rely on incremental view maintenance - more precisely, an update to an object generates one update for each relevant view, changing just the necessary data in the view without having to recalculate it from the ground up.
+In our PotionDB prototype, views are implemented as CRDTs like other objects - thus updating a view corresponds to a CRDT update.
+Since views are CRDTs, view queries are quick - the necessary data to answer the query is already present and should be supported by employing an appropriate CRDT.
 For example, for a top-k query, a top-k CRDT is used. For a query that requires multiple sums, with one sum per entry, a map CRDT with embedded counter CRDTs can be used.
 
+%16->14
 Storage and update costs are a big concern with views.
-Views are expected to be replicated in many data-centers (potentially all) and may relate to large sums of data.
-Thus, keeping the storage space used and the number of updates executed on each data-center low is essential.
+Views are expected to be replicated in multiple (potentially all) data centers and may concern large sums of data.
+Thus, it is essential to minimize both storage used and number of updates executed for each view in each data center.
+%Thus, keeping the storage space used and the number of updates executed on each data center low is essential.
 We tackle this two-fold.
-As previously mentioned, by using appropriate CRDTs in PotionDB, we can avoid storing unnecessary data.
-E.g., in a query for top 10 most sold products, we may only need the name of the product and the number of sales for the query, so it is unnecessary to duplicate other product data.
-Secondly, by leveraging in non-uniform replication (see Section \ref{subsec:nonuniform}), we can reduce storage and update costs further.
-In a nutshell, non-uniform replication allows us to not have to replicate every update and data entry, by identifying which updates will not change the state observable by the query.
-E.g., in a top 100 view, changes to objects outside of the top may not change the query result.
-This reduces, for each replica, the number of updates they apply and replicate, as well as the number of entries in the view.
-Partial replication also helps reducing costs, as some views may be replicated only in a subset of the servers (e.g: a view for the most popular products in Portugal does not need to be replicated everywhere).
+First, by using appropriate CRDTs, we avoid storing unnecessary data.
+%As previously mentioned, by using appropriate CRDTs in PotionDB, we can avoid storing unnecessary data.
+E.g., in a query for top 10 most sold products, we may only need the product's name and sales number for the query, so it is unnecessary to duplicate other product data.
+%E.g., in a query for top 10 most sold products, we may only need the name of the product and the number of sales for the query, so it is unnecessary to duplicate other product data.
+%Secondly, by combining non-uniform replication with partial replication, we reduce both costs by, respectively, reducing the size and number of updates of each view and by replicating the view only where it is relevant.
+%We detail this further in the next section.
+%Secondly, by leveraging on non-uniform replication (Section \ref{subsec:nonuniform}), we can reduce storage and update costs further.
+Secondly, by combining non-uniform and partial replication (Section \ref{sec:replication}), we reduce storage and update costs further.
+ Non-uniform replication identifies which updates may affect the state observable by the query, replicating only such updates. %, effectively reducing the number of updates applied and replicated in each replica as well as the number of entries in the view.
+ E.g., in a top 100 view, changes to objects outside the top may not affect the query result.
+ This effectively reduces the number of updates applied and replicated by each replica, as well as the number of entries in the view.
+ Partial replication further reduces costs, as some views may be replicated only in a subset of servers (e.g., a view concerning only Portuguese data does not need to be replicated everywhere).
+ 
+%Secondly, by leveraging on non-uniform replication (see Section \ref{subsec:nonuniform}), we can reduce storage and update costs further.
+%In a nutshell, non-uniform replication allows us to not have to replicate every update and data entry, by identifying which updates will not change the state observable by the query.
+%E.g., in a top 100 view, changes to objects outside of the top may not change the query result.
+%This reduces, for each replica, the number of updates they apply and replicate, as well as the number of entries in the view.
+%Partial replication also helps reducing costs, as some views may be replicated only in a subset of the servers (e.g: a view for the most popular products in Portugal does not need to be replicated everywhere).
 
-The last two challenges are deeply related with the replication and transaction execution algorithms described in the next sections.
+%The \ref{item:objviewconsistency}th challenge is deeply related with the replication and transactional algorithms described in the next sections.
+The last two challenges are deeply related with the replication and transaction execution algorithms described in the next sections. \todo{This may sound like a contradiction, because then on the next two paragraphs, I say that the former has mostly implications on the transactional and the latter on the replication. But either requirement only works because of the combination of transactional and replication algorithms}
 Thus, we focus now on their implications.
+
 Ensuring views and their objects stay consistent has implications mostly on the transactional algorithm.
-First, it implies that transactions must be atomic - the client either observes all changes, or none.
-Furthermore, it must be ensured that when an object is updated, all relevant views are updated in the same transaction.
-Finally, to reduce the amount of concurrency anomalies that may be observed due to weak consistency, transactions must execute and be applied according to causal consistency.
-This ensures that, e.g., if two transactions execute in a row and modify the same view, the client observes both changes properly.
+First, it implies that transactions must be atomic - clients either observe all changes or none.
+Moreover, it must be ensured that when an object is updated, all related views are updated in the same transaction.
+Finally, our transactional and replication algorithms should enable PSI+cset consistency (Section \ref{subsec:weak}) for our transactions, thus reducing the occurrence of observable concurrency anomalies due to weak consistency. 
+%Additionally, despite our solution being a weakly consistent one, our transactional and replication algorithms should ensure 
+%Finally, to reduce the amount of concurrency anomalies observable due to weak consistency, transactions must be applied according to their casual order.
+%Finally, to reduce the amount of concurrency anomalies that may be observed due to weak consistency, transactions must execute and be applied according to causal consistency.
+%This ensures that, e.g., if two transactions execute in a row and modify the same view, the client observes both changes properly.
 
 The last problem is mostly related with the replication algorithm.
-When a transaction is executed and is prepared to be replicated, it must be ensured that any view updates are sent to all replicas replicating said view(s), even if the base objects are not.
-This will imply some form of identifying the view(s) updates, sending them to the relevant replicas alongside all other updates relevant to each of those replicas.
+When preparing a transaction for replication, it must be ensured that all of the transaction's view updates are sent to all servers replicating said view(s), even if the base objects are not replicated in those servers. \todo{Is "even if the base objects are not" clear to what it is referring to?}
+%When a transaction is executed and is prepared to be replicated, it must be ensured that any view updates are sent to all replicas replicating said view(s), even if the base objects are not.
+This will imply some way to identify view(s) updates and sending them to the view(s) replicas, alongside all other updates relevant to each of those replicas.
 
 \section{Replication algorithms}
 \label{sec:replication_algorithm}
 
 Another crucial aspect of our work is the definition of replication and transaction execution algorithms that are appropriate for geo-replication.
-Both algorithms must cope and, when possible, leverage on partial and non-uniform replication for efficiency.
+Both algorithms must cope and, whenever possible, leverage on partial and non-uniform replication for efficiency.
 They also must guarantee views' well functioning as explained in the previous section.
 
 For our replication algorithm, we define the following goals:
 \begin{itemize}
-	\item Appropriate for long distance replication - this implies avoiding blocking mechanisms or having to coordinate with faraway replicas to make progress;
-	\item Data efficient - in general, reduce the amount of data sent to each server.
+	\item Appropriate for long distance replication - avoid blocking mechanisms (as network partitions would halt the system) or requiring coordination with faraway replicas to make progress (high latency).
+	%this implies avoiding blocking mechanisms or having to coordinate with faraway replicas to make progress;
+	\item Network efficient - in general, reduce the amount of data sent to each server. \todo{Network or data efficient? Thoughts?}
 	%In concrete, it must support partial replication, in order to support each server replicating different subsets of data.
 	%It must also support non-uniform replication, namely identifying operations that need to be replicated or not.
-	\item Consistent - must ensure consistency between objects is maintained. Namely, views must stay consistent with their related objects.
+	\item Consistent - must ensure that consistency between objects is maintained. Namely, views must stay consistent with their related objects.
 	Furthermore, views must be kept up-to-date, even if objects relevant for the view are not replicated in some of the servers where the view is.
 	%\item Consistent - in our case, keeping consistency is challenging and must be supported by the replication algorithm.
 	%As previously mentioned, views can depend on data that is split across many servers, without a single server having all the data.
@@ -135,214 +216,367 @@ For our replication algorithm, we define the following goals:
 \end{itemize}
 
 Our replication algorithm is asynchronous.
-Thus, servers can continue executing operations while replication happens in the background, without affecting correctness, even if latency between servers is high.
+Servers continue executing operations while replication happens in the background, without affecting correctness, even if latency between servers is high.
 Transactions commit locally, without needing any synchronization with other servers.
-Thus, the replication process is all non-blocking.
+Consequently, the replication process is fully non-blocking.
 
+%12->12 (OK as now the partitioning of a transaction is more clear and we state that the original order is kept.)
 We incorporate partial replication in our algorithm by only replicating, to each server, operations for objects the target server replicates.
 We do so as follows.
 First, we assume objects (including views) are arranged into ``groups'', which we call \emph{buckets}.
-Each object can be assigned to one bucket, and each server can replicate one or more buckets.
-Each server must register which buckets they are interested in (e.g., by using a publish-subscribe service such as RabbitMQ \cite{rabbitmq}).
-When replicating a transaction, the transaction is split into parts - one for each bucket present in the transaction.
-Each part is sent to all replicas of the part's bucket.
-After all parts are sent, a message is sent to all involved servers signalling that the transaction is complete.
+%Each object is assigned to one bucket, and each server can replicate one or more buckets.
+Each object is assigned to one bucket, with servers replicating one or more buckets.
+Each server must register which buckets they are interested in (e.g., via a publish-subscribe service such as RabbitMQ \cite{rabbitmq}).
+%To replicate a transaction, we first organize the transaction's operations in by their buckets, maintaining for each bucket the original order of operations.
+%To replicate a transaction, we partition its operations into groups based on their associated buckets, preserving the original order of operations within each group.
+To replicate a transaction, we first group its operations by bucket, preserving the operations' original order within each group.
+Each group is then sent to all replicas of the corresponding bucket.
+%When replicating a transaction, the transaction is split into parts - one for each bucket present in the transaction.
+%Each part is sent to all replicas of the part's bucket.
+After all groups are sent, a message is sent to all involved servers signalling that the transaction is complete.
 Note that the mechanism just described ensures views are kept up-to-date even for updates originated by objects not replicated in the target replica.
-This is ensured as, for each transaction, all operations for the bucket of the view will be grouped and sent to all replicas of the view's bucket.
+This is ensured as, for each transaction, all operations for a given view's bucket will be grouped together and sent to all replicas of that bucket.
+%This is ensured as, for each transaction, all operations for the bucket of the view will be grouped and sent to all replicas of the view's bucket.
 
 \todo{There is actually an optimization possible, related to sending the special message signalling the end of the transaction - when we send many transactions in a group, we only need to send this special message on the last one. Should this be mentioned?}
 
-To further reduce storage and network costs, specially for views, our replication algorithm must also support non-uniform replication, which has implications in the algorithm's design.
-In non-uniform replication, some operations that were previously not relevant (i.e., did not need to be replicated), may need to be replicated due to the execution of another operation.
-E.g., a remove of an element in the top 100 may force an update to some element not in top 100 to be replicated, as a new element may be joining the top.
-Supporting non-uniform replication in our design has two implications.
-In terms of the replication algorithm, whenever a transaction with non-uniform objects is executed, any ``new'' operations generated by executing the transaction are propagated to relevant replicas grouped in one transaction.
-It also has implications on the transactional algorithm, which we detail in the next section.
+%11->
+We also incorporate non-uniform replication, as it allows us to further reduce storage and network costs, specially for views.
+This is not straightforward, as in non-uniform replication,
+%This has implications in our algorithm's design, as in non-uniform replication, 
+%To further reduce storage and network costs, specially for views, our replication algorithm must also support non-uniform replication, which has implications in the algorithm's design.
+%In non-uniform replication, 
+operations previously irrelevant (i.e., did not need to be replicated) may now need to be replicated due to the execution of another operation.
+%some operations that were previously not relevant (i.e., did not need to be replicated), may need to be replicated due to the execution of another operation.
+E.g., removing an element in the top 100 may force an update to some element outside the top 100 to be replicated, as this updated element may be joining the top.
+%E.g., a remove of an element in the top 100 may force an update to some element not in top 100 to be replicated, as a new element may be joining the top.
+%Supporting non-uniform replication in our design has two implications.
+Supporting non-uniform replication in our design impacts both replication and transactional algorithms.
+%In terms of the replication algorithm, 
+For the former, whenever a transaction with non-uniform objects is executed, any ``new'' operations generated by executing the transaction are propagated to relevant replicas grouped in a new transaction.
+The implications on the latter are detailed in the next section.
+%It also has implications on the transactional algorithm, which we detail in the next section.
 
 Finally, our replication algorithm must maintain consistency.
 We aim to provide causal consistency across servers.
-Thus, our replication algorithm ensures operations are sent and received according to causal order.
+Thus, our replication algorithm ensures transactions (and therefore, operations) are sent and received according to causal order.
 In an implementation, this can be ensured by using, e.g., vector clocks.
-Applying the operations correctly according to causal order, as well as dealing with the visibility of the operations, is responsibility of the transactional algorithm described next.
+Applying the operations correctly according to causal order, as well as dealing with the visibility of the operations, is a responsibility of the transactional algorithm described next.
 
 \section{Transactional algorithm}
 \label{sec:transactional_algorithm}
 
-The transactional algorithm is the one responsible for applying both updates and queries, as well as keeping the system consistent.
-In more detail, our algorithm must ensure the following:
+The transactional algorithm is the one responsible for applying both updates and queries, while maintaining data consistency.
+%The transactional algorithm is the one responsible for applying both updates and queries, as well as keeping the system consistent.
+%In more detail, our algorithm must ensure the following:
+Specifically, our algorithm must ensure the following:
 \begin{itemize}
-	\item All updates of a transaction must be made visible at the same time - for any query on another transaction, either all updates are visible or none are (atomicity);
+	\item All updates of a transaction must be made visible at the same time - for any query on another transaction, either all of those updates are visible or none are (atomicity);
 	\item Queries must observe a consistent snapshot of the database - all queries of a transaction must observe objects in the same version;
-	\item Transactions received though replication must be executed correctly - despite only receiving the parts of the transaction for objects locally replicated, consistency must still be ensured;
-	\item Views and all related objects must stay consistent;
-	\item Whenever possible, to make better usage of multi-core CPUs, transactions should execute concurrently inside a replica as long as no conflict arises from doing so.
+	\item Transactions received through replication must execute correctly - despite only receiving the operations that concern objects locally replicated (i.e., not the complete transaction), consistency must still be maintained; \todo{Is this clear? Please check on the .tex file the old version that was here. I don't know which one is better.}  
+	%\item Transactions received though replication must execute correctly - despite only receiving the parts of the transaction for objects locally replicated, consistency must still be maintained;
+	\item Views and all related objects must stay consistent between themselves;
+	\item Whenever possible, to make better usage of multi-core CPUs, transactions should execute concurrently inside a server as long as no conflict arises from doing so.
 \end{itemize}
 
-We assume internally the system is partitioned in an arbitrary number of ``partitions'', with each partition storing a subset of the keyspace of objects.
-This allows to explore parallelism, by either assigning different partitions to different servers or to different CPU cores.
-In our work, we assume the later.
-Our transactional algorithm ensures, at the level of a single server, snapshot isolation (SI).
-When considering consistency between servers, our protocol ensures causal consistency.
+%6->8 (OK, added a lot more information.)
 
-\todo{Do I need to mention that partitions != buckets? Or not necessary? If so, how should I mention that?}
+We assume each object can be uniquely identified by a \emph{key}', and that the system is internally partitioned (sharded) in an arbitrary number of shards. \todo{Do I need to refer here to the partial replication subsection (i.e., where I talk about sharding vs partial replication)?}
+Each shard stores a subset of the objects' keyspace.
+%This allows us to explore parallelism by assigning different shards to different servers or CPU cores - in our work, we assume the later.
+This allows us to explore parallelism by assigning different shards to either different servers or to different CPU cores - in our work, we assume the later.
+Our transactional algorithm (together with the replication algorithm) ensures PSI+cset (see Section \ref{subsec:weak}) consistency, which can informally be stated as SI at the level of a single server, and causal consistency across servers.
+Note that shards are independent of buckets - two objects belonging to different shards can have the same bucket. \todo{Is this last phrase needed, or is it already clear?}
+%We assume the system is internally partitioned (sharded) in an arbitrary number of ``shards", with each shard storing a subset of the keyspace of objects.
+%We assume internally the system is partitioned in an arbitrary number of ``partitions'', with each partition storing a subset of the keyspace of objects.
+%This allows to explore parallelism, by either assigning different partitions to different servers or to different CPU cores.
+%In our work, we assume the later.
+%Our transactional algorithm ensures, at the level of a single server, snapshot isolation (SI).
+%When considering consistency between servers, our protocol ensures causal consistency.
 
-The existence of partitions lets read-only transactions execute in parallel.
-In fact, it allows even for queries inside the same transaction to execute in parallel.
-Both factors speed up the execution of transactions considerably.
+%7->6
+Sharding enables read-only transactions to execute in parallel - in fact, even queries inside the same transaction can execute in parallel.
+%The existence of partitions lets read-only transactions to execute in parallel.
+%In fact, it allows even for queries inside the same transaction to execute in parallel.
+Both factors speed up transaction execution considerably.
 This is possible as, associated to each transaction, is a version identifier (e.g., a vector clock).
-When executing queries, each partition uses this version identifier to ensure the correct version of each object is read (more details on version management in the next section).
+When executing queries, each shard uses this version identifier to ensure the correct version of each object is read (we detail version management in the next section).
 Thus, queries always observe a consistent snapshot of the database.
 
-On the other hand, read-write transactions may have to coordinate with other transactions to prevent conflicts.
-Our algorithm uses a two-phase commit protocol (2PC, check Section \ref{subsec:existingSystems}) to coordinate transactions when updates are involved.
-Given the partitions are in the same machine, the protocol executes very quickly, as the communication is only between threads.
-Our algorithm ensures the coordination is only done between partitions involved in read-write transactions - other partitions may keep executing read-only transactions unaffected.
-In fact, if two read-write transactions operate in distinct subsets of partitions, they will execute in parallel.
+%8->7
+%On the other hand, 
+Conversely, read-write transactions may have to coordinate with other transactions to prevent conflicts.
+%Our algorithm uses a two-phase commit protocol (2PC, see Section \ref{subsec:existingSystems}) to coordinate transactions when updates are involved.
+Our algorithm uses a two-phase commit protocol (2PC, see Section \ref{subsec:existingSystems}) for coordinating transactions involving updates.
+Since shards are on the same machine, 2PC executes very quickly, as communication is only between threads.
+Our algorithm minimizes the required coordination by only coordinating shards involved in read-write transactions - other shards keep executing read-only transactions unaffected. \todo{Is this description enough? Or should I explain clearly that 2PC is, for each transaction, ran only in the shards of that transaction? I was afraid that would create confusion.}
+%Our algorithm ensures the coordination is only done between shards involved in read-write transactions - other partitions may keep executing read-only transactions unaffected.
+%In fact, if two read-write transactions operate in distinct subsets of shards, they will execute in parallel.
+In fact, two read-write transactions operating in distinct subsets of shards will execute in parallel.
 
-The usage of 2PC and versions for objects ensures all updates of a transaction are visible at a single point in time.
-When a transaction is committed, the updated objects are moved to a new version, correspondent to the transaction's commit clock.
-This new version is only made available to be used by other transactions to read after all partitions finish executing the commit.
-Thus, the new version becomes visible at the same time in all partitions.
-The consistency between views and their objects is provided by requiring updates to objects and their view(s) to be grouped in the same transaction, ensuring both the view's and the objects' updates become visible at the same time.
+%Read-write transactions may require coordination to prevent conflicts.
+%Our algorithm uses a two-phase commit protocol (2PC, see Section \ref{subsec:existingSystems}) for coordinating transactions involving updates.
+%Since shards are co-located on the same machine, 2PC runs quickly via inter-thread communication.
+%Coordination is limited to shards involved in a given read-write transaction—others continue processing read-only transactions independently.
+%As a result, two read-write transactions touching disjoint shard sets execute in parallel.
 
-In transactions received through replication, only some parts of the transaction are received - the parts correspondent to the buckets locally replicated.
-This poses a challenge as the transaction must be correctly rebuild in order to ensure the end state is the same as if the full transaction had been received.
-Note that as long as updates to the same object are executed by the same order, the final state of each object will be the same.
-Also note that if all updates are made visible at the same time, then consistency is also ensured.
-This is due to the fact that updates to different objects are independent - executing the updates to object A before object B, or the other way around, leads to the same results.
-Thus, to correctly rebuild the transaction, all that is needed is for updates for the same object to keep the original order.
-The replication algorithm ensures this, as all updates to the same object belong to the same bucket, and the order of updates in a bucket is kept during replication.
-As such, a simple transaction rebuild algorithm can consist in grouping all buckets received, with all updates in a bucket according to the original order, and the order between buckets can be any.
-After a received transaction is rebuilt, it is executed as any other transaction, as long as all the transactions that happened-before have already been executed (if not, the transaction is put on hold until it can be executed).
+%8 -> 7
+Using 2PC and versions for objects ensures all transaction updates become visible at a single point in time.
+%The usage of 2PC and versions for objects ensures all updates of a transaction are visible at a single point in time.
+When a transaction commits, the updated objects are moved to a new version, correspondent to the transaction's commit clock.
+The new version is only made available for reading after it is known that all shards finished executing the commit.
+%This new version is only made available to be used by other transactions to read after all partitions finish executing the commit.
+Thus, the new version becomes visible at the same time in all shards.
+Consistency between views and their objects is provided by requiring updates to objects and their view(s) to be grouped in the same transaction, ensuring updates to both become visible simultaneously.
+%ensuring both the view's and the objects' updates become visible at the same time.
+
+%Using 2PC and object versions ensures all transaction updates become visible at a single point in time.
+%On commit, updated objects move to a new version marked by the transaction’s commit clock.
+%This version is only made visible after all shards complete the commit, ensuring simultaneous visibility across shards.
+%Consistency between views and their objects is maintained by grouping their updates in the same transaction, so both become visible together.
+
+%16->14. Would be nice to compact further.
+For a transaction received through replication, only the portion corresponding to buckets locally replicated is received.
+%In transactions received through replication, only some parts of the transaction are received - the parts correspondent to the buckets locally replicated.
+This poses a challenge as the transaction must be correctly rebuilt in order to ensure the resulting state is the same as if the full transaction had been received.
+Note that, as previously described, all of a transaction's updates are made visible at the same time.
+Moreover, if updates to the same object are executed according to the original order, each object will reach the correct final state.
+This is enough to ensure consistency, as updates to different objects are independent due to being made visible at the same time.
+%Note that as long as updates to the same object are executed by the same order, the final state of each object will be the same.
+%Also note that if all updates are made visible at the same time, then consistency is also ensured.
+%This is due to the fact that updates to different objects are independent - executing the updates to object A before object B, or the other way around, leads to the same results.
+Thus, to correctly rebuild the transaction, we only need to keep updates for the same object according to the original order, which is ensured by the replication algorithm.
+%Thus, to correctly rebuild the transaction, all that is needed is for updates for the same object to keep the original order.
+%The replication algorithm ensures this, as all updates to the same object belong to the same bucket, and the order of updates in a bucket is kept during replication.
+A simple transaction rebuild algorithm can consist in grouping all buckets received, maintaining the order of updates within a bucket and any order across buckets.
+%A simple transaction rebuild algorithm can consist in grouping all buckets received, with all updates in a bucket according to the original order, and the order between buckets can be any.
+After a received transaction is rebuilt, it is executed as any other transaction, as long as all the transactions that happened-before have already been executed. 
+If not, the transaction is put on hold until it can be executed.
 
 \todo{Is the paragraph above clear?}
 
-To support the execution of transactions with objects supporting non-uniform replication, we proceed as follows.
-When a transaction with non-uniform objects is executed and generates new operations, those operations are grouped in a new transaction, from the partitions involved.
-After the new transaction commits in the relevant partitions, the transaction is sent to the replication algorithm.
+To support executing transactions with objects following non-uniform replication, we proceed as follows.
+When a transaction with non-uniform objects is executed and generates new operations, they are grouped in a new transaction, from the shards involved.
+After the new transaction commits in the relevant shards, it is sent to the replication algorithm.
 
-A current limitation of our work, related with both the replication and transactional algorithm, is that buckets are static.
-That is, it is assumed the set of buckets a server replicates does not change.
-However, as seen in Section \ref{subsec:partial}, for some applications access patterns may change as time goes by, or even data locality itself (e.g., an user which travels to another region).
-We plan to address this by supporting what is known as dynamic partitioning.
+%To support transactions involving non-uniformly replicated objects, we proceed as follows:
+%If such a transaction generates new operations, they are grouped into a new transaction using the involved shards.
+%Once this new transaction commits on the relevant shards, it is passed to the replication algorithm.
+
+A current limitation of our work, related with both the replication and transactional algorithms, is that buckets are static - i.e., the set of buckets a server replicates does not change.
+However, as seen in Section \ref{subsec:partial}, for some applications access patterns may change over time, or even data locality itself (e.g., an user moves to another continent).
+%That is, it is assumed the set of buckets a server replicates does not change.
+%However, as seen in Section \ref{subsec:partial}, for some applications access patterns may change as time goes by, or even data locality itself (e.g., an user which travels to another region).
+We plan to address this by supporting dynamic partitioning.
 This requires designing a protocol that allows for the following:
 
 \begin{itemize}
 	\item support for new nodes joining the system;
 	\item support for nodes leaving the system, as well as their recovery in case of a crash;
-	\item efficient data transfers (transfer only relevant objects, compact operation history, etc.);
+	\item efficient data transfers (e.g. transfer only relevant objects, compact operation history);
 	\item dynamic partitioning itself - add or remove buckets from existing servers.
-\end{itemize}	
+\end{itemize}
 
-The last goal is particularly challenging, as the repartitioning may happen while multiple transactions are ongoing, potentially for the buckets being added/removed.
-We must ensure no update is lost during repartitioning and that queries can still be served.
-Consistency between views and objects must also be maintained even if views or objects referred by views are being re-partitioned.
-At the moment, support for new nodes joining the system and a basic data transfer is already supported, but more work on the protocol is needed to achieve the remaining goals.
+%The last goal is particularly challenging, as repartitioning may happen while multiple transactions are ongoing, potentially for the buckets being added/removed.
+The last goal is particularly challenging, as repartitioning may occur while several transactions are ongoing, possibly involving the buckets being added/removed.
+%We must ensure no update is lost during repartitioning and that queries can still be served.
+We must ensure no update is lost and that queries are still served during repartitioning.
+Consistency between views and objects must also be maintained even if views or objects referred by views are being repartitioned.
+At the moment, support for new nodes joining the system and a basic data transfer is already supported in PotionDB, but more work on the protocol is needed to achieve the remaining goals.
 
 \section{Version Management}
 \label{sec:version_management}
 
-In order to ensure each transaction can see a consistent snapshot of the database, while still allowing multiple transactions to occur in parallel, it is necessary to provide specific versions of any given object.
-More precisely, it is necessary to provide the version required by any ongoing transaction.
-Thus, some mechanism to provide old versions is needed.
+Our transactional algorithm ensures transactions see a consistent snapshot of the database, according to the transaction's version identifier.
+Thus, some mechanism to provide old versions of objects corresponding to a given version identifier is required.
+%Our transactional algorithm ensures consistency by providing, for each transaction, a consistent snapshot of the database, according to the transaction's version identifier.
+%Thus, some mechanism to provide old versions of objects according to a given version identifier is needed.
 
-Some solutions, e.g., Cure, keeps old versions around, garbage collecting them when no longer needed \cite{cure}.
-In this work, we decided to explore a different approach - instead, we keep only the latest version (and optionally, we may cache a few other versions for performance when appropriate, but not as a requirement).
-Alongside the latest version, we keep two logs for each object - the list of updates executed, and the list of ``effects'' of each update.
-We define an effect as the changes an operation had on an object when it was executed.
-Both logs are needed, as the same operation may imply different changes to the object depending on when it was executed.
+%In order to ensure each transaction can see a consistent snapshot of the database, while still allowing multiple transactions to occur in parallel, it is necessary to provide specific versions of any given object.
+%More precisely, it is necessary to provide the version required by any ongoing transaction.
+%Thus, some mechanism to provide old versions is needed.
+
+
+%10->10 (added phrase regarding memory footprint)
+Some solutions, e.g., Cure, keep several old versions around, garbage collecting them when no longer needed \cite{cure}.
+However, this may lead to an unreasonable memory footprint for large objects, such as views.
+Therefore we explore a different approach - instead, we keep only the latest version (optionally, we may cache a few other versions for performance when appropriate, but not as a requirement).
+Alongside the latest version, we keep two logs for each object - the list of updates executed, and the list of \emph{effects} of each update.
+We define \emph{effect} as the changes an operation had on an object when it was executed.
+Both logs are needed, as the same operation may yield different changes to the object depending on when it was executed.
 E.g., a remove from a set may or not remove an object from the set, depending on the existence of concurrent adds for the same element.
 
-Our algorithm thus works as follows.
-First, given a target version and the current version, we ``undo'' the effects, until we are at a version for which the vector clock is smaller or equal in every entry than the target version.
-Afterwards, we re-apply the operations needed to reach the target vector clock.
-The reason for the need to re-apply operations is due to concurrent operations.
-Operations that are concurrent can be re-applied in any order, but causality must still be maintained between two non-concurrent operations (e.g., operation A may be concurrent to operation B and C, but B and C are causally related - A can be re-applied at any time, but B and C must be applied in order).
+%8->8. Added the line to simplicity and rewrote the explanation of version rebuilding.
+Our algorithm works as follows.
+For simplicity, but not as a requirement of our algorithm, we assume vector clocks are used as versions identifiers.
+First, given a target version and the current version, we ``undo'' the \emph{effects}, until we are at the highest version for which the vector clock is smaller or equal in every entry than the target version.
+Afterwards, we re-apply the operations needed to reach the target vector clock, ensuring that any causally related operations are applied according to their original order.
+Concurent operations may be re-applied in any order.
+This rebuilding process lets us reconstruct versions that may not even have been directly observed by the local replica. \todo{Do I need to explain this? It's hard to explain in without a long explanation. The idea is that we may want to rebuild a version that was not observed in the local replica: e.g., if replica A observes replica B at versions 10 and 20 (due to replication not happening in-between), we may still want to see version 15 of replica B at replica A. This is even more complicated as it may involve multiple replicas and thus different interleaving of operations. Hence the need to rebuild.}
+%The re-application of operations is needed as the requested version may be a version that was not observed directly by the replica, due to a 
+%The re-application of operations is needed due to concurrent operations.
+%Concurrent operations may be re-applied in any order, but causally related operations must be applied in order.
+%E.g., operation A may be concurrent to operation B and C, but B and C are causally related - A can be applied at any point, but B and C must be applied in order.
+%The reason for the need to re-apply operations is due to concurrent operations.
+%Operations that are concurrent can be re-applied in any order, but causality must still be maintained between two non-concurrent operations (e.g., operation A may be concurrent to operation B and C, but B and C are causally related - A can be re-applied at any time, but B and C must be applied in order).
 
-\todo{Is this explanation of the version thing okay? Also, should I include some scheme/image with an example?}
+%\todo{Is this explanation of the version thing okay? Also, should I include some scheme/image with an example?}
 
-As of now, PotionDB only implements the version management described above.
-On the next steps of our work, we plan to implement another version management system which is based on keeping in memory the previous versions of the objects.
-The intention is to then compare the performance of both solutions and access the advantages of ours, namely in terms of performance and space used.
-Furthermore, and before the comparison is done, it is also necessary to design a garbage collection algorithm for version management.
-Without garbage collection, the metadata of both solutions - respectively, the log of updates + effects and the list of old states, will keep growing indefinitely.
-Adding support for efficient garbage collection is not straightforward - it is necessary to determine how old the information must be in order to be safe to be garbage collected.
-If information too recent is deleted, ongoing transactions may have to be aborted (as they need garbage collected versions) and thus affect performance and user experience negatively.
+We identify the following next steps on this topic:
+\begin{enumerate*}[label=(\roman*)]
+	\item \label{item:vms} implement our algorithm in PotionDB;
+	\item \label{item:gc} design and implement an effective garbage collection (GC) algorithm to ensure space used does not grow indefinitely as updates are applied;
+	\item \label{item:benchmarkVms} implement other version management solutions and run benchmarks to comparatively evaluate our algorithm's performance and space efficiency.
+	%\item \label{item:benchmarkVms}implement other version management solutions and benchmark them, to assess our solution comparatively in terms of performance and space used in different scenarios.	
+\end{enumerate*}
+Remarkably, step \ref{item:gc} is not straightforward, as it is challenging to identify if a version is safe to be garbage collected or not, as ongoing transactions may require access to old versions. %Could be shortened if needed; can try to avoid using the "or not".
+Moreover, it is also necessary to determine the latest common version identifier across shards, as some shards may be lagging behind.
 
-One way to address this is to, periodically, delete old information (old updates and effects) that are guaranteed to no longer be necessary.
-This can be achieved by checking which partition has the oldest clock (or by keeping track of a clock that is known to be ``safe'' in all partitions), and deleting logs of updates and effects older than said clock.
-It will be necessary to consider ongoing transactions, possibly by delaying the deletion of old data, using an even older clock or restarting the transaction with a more recent clock.
-Finally, the cleaning should be done when system's load is low, or in the background to avoid affecting performance.
+Step \ref{item:vms} is already completed, while step \ref{item:gc} is ongoing - we have designed and implemented a basic GC algorithm able to determine a safe clock across shards.
+However, it takes a cautious approach regarding ongoing transactions - data deletion is delayed by a few seconds in order to allow ongoing transactions to finish.
+This may still lead long-running transactions to abort, however.
+We plan to address this by tracking ongoing transactions to determine the oldest version (\emph{V}) that is still relevant, and delete all versions older than \emph{V} during GC. \todo{Maybe here I should not say "we plan to improve on this by (...)" and instead say something like "a possible solution to improve on this is by (...)"?}
+Finally, for step \ref{item:benchmarkVms} we already implemented a version management similar to Cure's \cite{cure}, but other solutions and benchmarking are still planned future work.
 
-\section{Consistency levels}
+
+%We plan to benchmark our version management solution, comparing it with other existing solutions and assess its advantages and disadvantages in different scenarios, both in terms of performance and space used.
+%To ensure our solution remains performant as more updates are applied to each object, a garbage collection algorithm for version management is essential, as otherwise version metadata will grow indefinitely.
+%Effective support for garbage collection is not straightforward, as we must carefully determine which version(s) are safe to be garbage collected, as ongoing transactions may need to access old versions.
+%If a too recent version is deleted, ongoing transactions may have to be aborted and thus negatively affect performance and user experience.
+
+%We have implemented the version management described above and, more recently, also a solution similar to Cure \cite{cure}, i.e., to keep all observed versions.
+%On the next steps of our work, we plan to thoroughly compare the performance of both solutions, accessing the advantages and disadvantages of our solution in multiple scenarios in terms of performance and space used.
+%Potentially we may also implement more alternative version management solutions.
+%Essential to 
+
+
+%As of now, PotionDB only implements the version management described above.
+%On the next steps of our work, we plan to implement another version management system which is based on keeping in memory the previous versions of the objects.
+%The intention is to then compare the performance of both solutions and access the advantages of ours, namely in terms of performance and space used.
+%Furthermore, and before the comparison is done, it is also necessary to design a garbage collection algorithm for version management.
+%Without garbage collection, the metadata of both solutions - respectively, the log of updates + effects and the list of old states, will keep growing indefinitely.
+%Adding support for efficient garbage collection is not straightforward - it is necessary to determine how old the information must be in order to be safe to be garbage collected.
+%If information too recent is deleted, ongoing transactions may have to be aborted (as they need garbage collected versions) and thus affect performance and user experience negatively.
+%
+%One way to address this is to, periodically, delete old information (old updates and effects) that are guaranteed to no longer be necessary.
+%This can be achieved by checking which partition has the oldest clock (or by keeping track of a clock that is known to be ``safe'' in all partitions), and deleting logs of updates and effects older than said clock.
+%It will be necessary to consider ongoing transactions, possibly by delaying the deletion of old data, using an even older clock or restarting the transaction with a more recent clock.
+%Finally, the cleaning should be done when system's load is low, or in the background to avoid affecting performance.
+%
+%\todo{The text above may need to be updated. We already support the other version, we have GC but both have not been evaluated for performance.}
+
+%\section{Consistency levels}
+\section{Consistency levels and Data Access}
 \label{sec:consistency_levels}
 
-Currently, our algorithms are designed to provide causal consistency.
-Our prototype implementation supports both causal consistency and read committed consistency, albeit only one can be used at a time for all transactions.
-Read committed provides less guarantees but allows for higher operation throughput.
-However, we believe more work with consistency could be interesting research, due to the implications views have in our system.
+%Keep initial paragraph of motivation + our current solution. (albeit adapt/rewrite)
+%Discuss multiple consistency levels (but shorter) and the challenging requirement of still needing to keep views + objects consistent to support the stronger consistency levels
+%Invariants (update to say we already have bounded counter; views+objects have implicit referential integrity by forcing view updates to be bundled and applied with objects' updates.)
+%Mix in the above with the desirability of SQL for PotionDB, as it would allow to easily specify expressive queries that rely on PotionDB's views. Mention the inherent consistency challenges and invariants to support. Mention the extra challenge of supporting invariants on views.
 
-One possibility would be to support multiple consistency levels for transactions.
-This would imply supporting transactions executing with different consistency levels, as done e.g. with red-blue consistency.
-This would be useful, as some queries/transactions may be able to cope with weaker consistency guarantees and thus benefit from increased performance.
-Other queries that require stronger consistency can request so, executing a bit slower but with stronger guarantees on the result.
-One way to ensure this is to make the reads responsible for ensuring the desired consistency level.
-I.e., transactions with writes would still be atomic to ensure objects (and their views) stay consistent, while reads executing under lower consistency guarantees can, e.g., read objects at different versions without internal coordination to improve performance.
+Currently, our algorithms are designed to provide PSI+cset consistency.
+Our prototype implementation supports both PSI+cset and read committed consistency, albeit currently only one can be used at a time for all transactions.
+%Currently, our algorithms are designed to provide causal consistency.
+%Our prototype implementation supports both causal consistency and read committed consistency, albeit only one can be used at a time for all transactions.
+%Read committed provides less guarantees but allows for higher operation throughput.
+Read committed provides weaker guarantees but enables higher throughput.
+We believe further work with consistency in an interesting research avenue due to the implications views have in our system. \todo{Please check if the rest of this section makes this clear enough, or if I should add more references to how views complicate everything (basically the point is: must always ensure views + objects stay consistent no matter what we do.)}
+%However, we believe more work with consistency could be interesting research, due to the implications views have in our system.
 
-Another interesting possibility to strengthen our consistency guarantees would be by supporting invariants.
-Invariants allow users to define conditions for an object which must stay true at any point in time.
-This is useful to, e.g., ensure an item's stock never goes negative.
-Supporting this under weak consistency is challenging as servers execute operations concurrently without synchronization.
-Some solutions already exist in the literature, e.g., \cite{boundedCounter}, which suggests for the case of numeric invariants in counters, to distribute among replicas how much they can decrement/increment safely without breaking the invariant.
-A similar principle could potentially be used for other kinds of objects.
-Supporting invariants in materialized views would be extra challenging, as these invariants would have implications on the state of many other objects, which would need invariants too.
+%10->10
+One possible research direction is to support more consistency levels and allow each transaction to choose the desired consistency level, similarly to red-blue consistency \cite{li2012making}.
+This is useful, as some queries (e.g., a statistics read on a view) can cope with weaker consistency and benefit from better performance , while transactions requiring strong consistency guarantees (e.g., banking) can request so.
+Ideally, weaker consistent transactions should not break the database's consistency (including view-object consistency) to ensure strongly consistent transactions still execute correctly.
+One way to ensure this is to require transactions with updates to still execute atomically, while letting read-only transactions execute according to their consistency level.
+E.g., read commited reads can directly read any commited version, skipping internal coordination for improved performance.
 
-Work on strengthening/expanding our consistency guarantees has not been started yet.
-While this seems an interesting venue, it is still to be defined how will we precisely achieve said goal.
-The possibilities above are, indeed, some possibilities we may take, but it is not yet set on stone and is thus subject to changes.
+%One possibility would be to support multiple consistency levels for transactions.
+%This would imply supporting transactions executing with different consistency levels, as done e.g. with red-blue consistency. %TODO: Citation.
+%This would be useful, as some queries/transactions may be able to cope with weaker consistency guarantees and thus benefit from increased performance.
+%Other queries requiring stronger consistency can request so, executing a bit slower but with stronger guarantees as a result.
+%One way to ensure this is to make the reads responsible for ensuring the desired consistency level.
+%I.e., transactions with writes would still be atomic to ensure objects (and their views) stay consistent, while reads executing under lower consistency guarantees can, e.g., read objects at different versions without internal coordination to improve performance. %NOTE: This is what we already do actually... maybe make it more clear/precise?
 
-\todo{I don't think I mentioned very well the part of ``this area/topic seems interesting but it is not yet well defined''. Suggestions? Maybe I should had taken out detail on the invariants/consistency levels? I thought they could be here as possible routes we may take, but maybe that is not wise to do at this point in time.}
+%11->14
+Another interesting approach is to strengthen our consistency guarantees by supporting invariants.
+Invariants allow users to define conditions for an object that must hold at all times.
+This is useful to ensure, e.g., an item's stock is never negative, a sale matches an existing product, etc. \todo{Maybe this explanation is not needed, as I already explained it in Section \ref{subsec:invariants}?}
+However, invariants are challenging under weak consistency as transactions across servers execute without coordination.
+Even so, we already support numerical invariants through Bounded Counters \cite{boundedCounter}, as well as referential integrity between views and their objects, by forcing updates for both to be coupled together.
+However, referential integrity across any two objects remains a challenge, as updates that break this invariant can occur in concurrent transactions.
+We plan to address this alongside designing novel solutions for invariants such as uniqueness and disjunction, as the existing solutions discussed in Section \ref{subsec:invariants} have considerable shortcomings.
+Furthermore, we plan to support invariants in materialized views, which is extra challenging as the invariants will have implications on the state of related objects.
+To the best of our knowledge, invariant support in materialized views under weak consistency is novel.
+
+A related line of research that we plan to follow is to design a SQL-like language for PotionDB.
+Many strongly consistent systems offer a relational interface, as it is convenient for application development \cite{analyticdb, clickhouse, cassandra}.
+Thus, we believe this would fortify our vision of a geo-distributed, partially replicated database that attempts to get the best of both worlds, offering high availability, efficient storage costs, a rich API and solid consistency guarantees.
+However, bringing SQL to PotionDB is not straightforward: it raises concerns regarding consistency inter and intra-table, and invariant support is challenging.
+
+%Another interesting possibility to strengthen our consistency guarantees would be by supporting invariants.
+%Invariants allow users to define conditions for an object which must stay true at any point in time.
+%This is useful to, e.g., ensure an item's stock never goes negative.
+%Supporting this under weak consistency is challenging as servers execute operations concurrently without synchronization.
+%Some solutions already exist in the literature, e.g., \cite{boundedCounter}, which suggests for the case of numeric invariants in counters, to distribute among replicas how much they can decrement/increment safely without breaking the invariant.
+%A similar principle could potentially be used for other kinds of objects.
+%Supporting invariants in materialized views would be extra challenging, as these invariants would have implications on the state of many other objects, which would need invariants too. %Point back to the Invariant section and shorten the description here. Also, state what we already implemented, and possible future work.
+
+%Work on strengthening/expanding our consistency guarantees has not been started yet.
+%While this seems an interesting venue, it is still to be defined how will we precisely achieve said goal.
+%The possibilities above are, indeed, some possibilities we may take, but it is not yet set on stone and is thus subject to changes. %TODO: Definitely need to rewrite this.
+%
+%\todo{I don't think I mentioned very well the part of ``this area/topic seems interesting but it is not yet well defined''. Suggestions? Maybe I should had taken out detail on the invariants/consistency levels? I thought they could be here as possible routes we may take, but maybe that is not wise to do at this point in time.}
 
 \section{Contributions}
 \label{sec:contributions}
 
-In this section we now summarize both the contributions already achieved with this work, as well as the expected upcoming ones.
+In this section we summarize both the contributions already achieved with this work, as well as the expected upcoming ones.
 As of now, we have done the following contributions:
 
 \begin{itemize}
 	\item A new replication algorithm, combining partial, non-uniform and geo replication;
-	\item A transactional algorithm with support for snapshot isolation at the server level, while coping with causal consistency across servers and with support for both partial and non-uniform replication;
-	\item Support for materialized views under causal consistency, where updates to objects and their views are visible atomically;
+	\item A transactional algorithm providing PSI+cset consistency, compatible with both partial and non-uniform replication
+	%\item A transactional algorithm with support for snapshot isolation at the server level, while coping with causal consistency across servers and with support for both partial and non-uniform replication;
+	%\item Support for materialized views under causal consistency, where updates to objects and their views are visible atomically;
+	\item Support for materialized views under weak consistency, with updates to objects and their views visible atomically;
 	\item Support for materialized views to refer to data not locally replicated + non-uniform and partial replication of views to reduce their storage and replication costs;
 	\item A new form of incrementally maintaining views, with CRDT update operations;
 	\item An algorithm to reconstruct the state of any object at any given point in time, by using the actual object state, a list of operations and a list of effects;
 	\item An implementation in our prototype PotionDB of all the features above.
 \end{itemize}
+\todo{I don't think implementing the version management solution of Cure, a basic GC algorithm nor numeric invariants (bounded counter) count as contributions, correct? Nor does TPC-H's queries implementation nor benchmarking already done.}
 
+%5->5
 We highlight the novelty of our replication algorithm, which supports both partial and non-uniform replication efficiently.
 Materialized views in a geo-distributed, weakly consistent, with partial and non-uniform replication support, without requiring all relevant objects to be present in the same server, is also novel, as is the incremental updating of views with CRDTs' update operations.
 
+%14->12
 Albeit not a contribution on itself, considerable amounts of work have been put into supporting many kinds of CRDTs in PotionDB, to ensure many different kinds of views and objects can be provided.
 Not only this eases application development with PotionDB, it is essential to ensure as many kinds of queries as possible are supported.
-This also implied some extensions or adaptations to existing CRDT designs.
-Another noteworthy mention is the implementation of the TPC-H benchmark \cite{tpch}, namely its dataset, updates and a subset of its queries.
-As TPC-H is oriented to relational databases using SQL, it was necessary to adapt the tables to objects of PotionDB, as well as define the appropriate views for each query.
-While we only implemented a subset of queries, we note that all queries in TPC-H would be possible to implement with materialized views in PotionDB using the existing CRDTs.
-The main goals of implementing TPC-H's benchmark is to both evaluate PotionDB's performance and show its expressiveness.
-As a last mention, we have also implemented a simple algorithm for executing transactions in a replica when some of the objects are not locally replicated.
+This implied some extensions and adaptations to existing CRDT designs, as well as new CRDTs.
+Another noteworthy mention is the implementation in PotionDB of the complete TPC-H benchmark \cite{tpch}, including its dataset, updates and the full query set. %Should I mention it's something not done by many publications as it is very challenging? I only know of one publication that admits implementing only a subset of the queries.
+As TPC-H is oriented to relational databases using SQL, it was necessary to adapt the tables to PotionDB's objects, as well as define appropriate views for each query.
+While we implemented TPC-H benchmark for evaluating PotionDB, it also highlights PotionDB's impressive expressiveness, as its views fully support all TPC-H queries.
+%The main goals of implementing TPC-H's benchmark is to both evaluate PotionDB's performance and demonstrate its interface's expressiveness.
+Lastly, we also implemented a simple algorithm for executing transactions in a replica when some of the objects are not locally replicated. \todo{The sole reason for implementing some of the new CRDTs was to ensure queries with large result set or complex processing would still be efficient. Should I mention this or no need?}
+\todo{Should the reference for executing transactions for non locally replicated objects be in the transactional algorithm section, or is it okay here. Also, any further details on it or ok like this?} 
 
-\todo{Please tell me if the paragraph above should be deleted - I just wanted to show where some of the time was spent.}
-
-In terms of the work left to do, we expect to achieve the following contributions:
+In terms of future work, we expect to achieve the following contributions:
 
 \begin{itemize}
-	\item A garbage collection algorithm for systems implementing SI with vector clocks. This algorithm will be able to determine a safe clock in all partitions and do the cleaning without affecting considerably the system's performance;
-	\item Provision of different consistency guarantees, possibly by providing different consistency levels for transactions or invariants in a weakly consistent scenario
-	\item An algorithm for dynamic partitioning compatible with snapshot isolation (server-level) and causal consistency (cross-servers), without loss of updates or stopping serving queries. This re-partitioning will work both for creating/removing partitions, adding/removing servers, and properly support views and their related objects;
-	\item A performance evaluation of our system and of the algorithms implemented.
+	\item An algorithm for dynamic partitioning compatible with PSI+cset, without update loss or halting serving queries. This algorithm will support creating/removing partitions, adding/removing servers, and will maintain view-object consistency;
+	\item An efficient garbage collection algorithm for systems implementing SI or PSI. This algorithm should determine a safe clock across shards and clean (ideally) all versions no longer reachable by ongoing transactions, without aborting them and without considerable performance impact;
+	%\item A garbage collection algorithm for systems implementing PSI+cset with vector clocks. This algorithm will be able to determine a safe clock in all partitions and do the cleaning without affecting considerably the system's performance;
+	\item Provision of multiple consistency guarantees, where the user chooses the desired consistency for each transaction;
+	\item Support for various types of invariants on both objects and materialized views in a weakly consistent, partially replicated environment;
+	\item Proposal and implementation of a SQL-like interface compatible with key-value stores, with support for view specification;
+	%\item Provision of different consistency guarantees, possibly by providing different consistency levels for transactions or invariants in a weakly consistent scenario
+	\item An exhaustive performance evaluation of our system and of the algorithms implemented.
 \end{itemize}
 
-It is noteworthy that the aforementioned contributions always have to take in consideration the consistency between views and their objects, which makes these expected contributions more challenging and novel.
+%3->?
+Noteworthy, all aforementioned contributions must take in consideration the consistency between views and their objects, significantly amplifying both the complexity and novelty of our expected contributions.
+%It is noteworthy that the aforementioned contributions always have to take in consideration the consistency between views and their objects, which makes these expected contributions more challenging and novel. %TODO: Update this to make it more "impactful".
 
 \todo{Any other contributions? Any that should be removed?}
 

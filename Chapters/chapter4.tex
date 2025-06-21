@@ -25,39 +25,77 @@ We have described the challenges of each task in Chapter \ref{cha:research_state
 \todo{Should I in the plan mention about our submission to VLDB? Like have that be part of the table/figure?}
 \todo{A concern of mine is that adding ``consistency levels'' may imply changes to dynamic partitioning.}
 
-\begin{center}
-	\begin{tabular}{c | c}
-		\hline
-		Time frame & Activity \\
-		\hline
-		June 2022 to September 2022 & garbage collection for version management \\
-		September 2022 to November 2022 & 
-		Implementation of alternative version management solution \\
-		September 2022 to January 2023 & Evaluation of garbage collection and version management solutions \\
-		November 2022 to May 2023 & Dynamic partitioning \\
-		March 2023 to June 2023 & Evaluation of PotionDB with dynamic partitioning \\
-		February 2023 to November 2023 & Consistency levels \\
-		July 2023 to December 2023 & Evaluation of consistency levels + final PotionDB evaluation \\
-		September 2023 to March 2024 & Writing of PhD thesis and final publications \\
-		\hline
-	\end{tabular}
+%\begin{center}
+%	\begin{tabular}{c | c}
+%		\hline
+%		Time frame & Activity \\
+%		\hline
+%		June 2022 to September 2022 & garbage collection for version management \\
+%		September 2022 to November 2022 & 
+%		Implementation of alternative version management solution \\
+%		September 2022 to January 2023 & Evaluation of garbage collection and version management solutions \\
+%		November 2022 to May 2023 & Dynamic partitioning \\
+%		March 2023 to June 2023 & Evaluation of PotionDB with dynamic partitioning \\
+%		February 2023 to November 2023 & Consistency levels \\
+%		July 2023 to December 2023 & Evaluation of consistency levels + final PotionDB evaluation \\
+%		September 2023 to March 2024 & Writing of PhD thesis and final publications \\
+%		\hline
+%	\end{tabular}
+%	\label{table:work_plan}
+%\end{center}
+
+\setlength{\tabcolsep}{18pt}
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[h!]
+	\centering
+	{\rowcolors{2}{gray!10!white!90}{white!100}
+	\begin{tabular} {ll}%{|p{4cm}|p{9cm}|}
+		\toprule
+		\textbf{Time Frame} & \textbf{Activities} \\
+		\midrule
+		July 2025 -- August 2025 & Possible revision of VLDB article \\
+		July 2025 -- September 2025 & Invariants + PotionDB SQL \\
+		September 2025 -- January 2026 & Dynamic Partitioning \\
+		November 2025 -- January 2026 & Consistency Levels \\
+		February 2026 -- March 2026 & GC + Alternative Version Management \\
+		March 2026 -- April 2026 & Ph.D. Proposal Preparation \\
+		April 2026 -- September 2026 & Ph.D. Dissertation \\
+		\bottomrule
+	\end{tabular}}
 	\label{table:work_plan}
-\end{center}
+	\caption{Tentative time line of activities}
+	\vspace*{-0.8em}
+\end{table}
 
-A lot of work has already been done in the context of evaluating PotionDB, namely by implementing TPC-H's benchmark and other test clients.
-We believe this will make the next evaluating steps quicker and smoother, as the testing setup can be leveraged on for the next steps.
-Our evaluation will be done in the Grid'5000 testbed, which allows to make usage of multiple machines to run instances of PotionDB on.
-Latency from geo-distribution can be simulated by imposing latency on the links, which was already done in our experiments.
+%TODO: Re-read and compact (all below).
+We submitted a paper to VLDB with our core contributions done so far, which is currently under review.
+Given that VLDB is a A* conference, a lot of work has been done in the context of evaluating PotionDB, namely fully implementing TPC-H's benchmark \cite{tpch}, flexibility on client/server settings and functionalities, etc.
+We have also implemented micro benchmarking and YCSB's benchmark \cite{ycsb}.
+As such, the next evaluating steps will be faster, as the evaluation foundation is already there.
+We run our experiments in the Grid'5000 testbed \cite{Grid5000}, enabling us to use multiple machines for distributed experiments.
+We simulate latency from geo-distribution with tc \cite{tc}, based on real measurements \cite{AWSLatency}.
+%A lot of work has already been done in the context of evaluating PotionDB, namely by implementing TPC-H's benchmark and other test clients.
+%We believe this will make the next evaluating steps quicker and smoother, as the testing setup can be leveraged on for the next steps.
+%Our evaluation will be done in the Grid'5000 testbed, which allows to make usage of multiple machines to run instances of PotionDB on.
+%Latency from geo-distribution can be simulated by imposing latency on the links, which was already done in our experiments.
+%
+%\todo{Do I need to make any special reference to Grid 5000?}
 
-\todo{Do I need to make any special reference to Grid 5000?}
+There is considerable overlap between Dynamic Partitioning and Consistency Levels.
+Initially we will focus solely on Dynamic Partitioning with the current consistency options offered by PotionDB.
+We foresee that introducing extra consistency levels may have implications on the dynamic partitioning, specially strong consistency, hence the overlap.
 
-There is some considerable overlap between dynamic partitioning and consistency levels.
-This happens as supporting different consistency models and/or invariants may have impacts on how dynamic partitioning works, thus we need to make sure our partitioning algorithm can cope with different consistency guarantees.
+%There is some considerable overlap between dynamic partitioning and consistency levels.
+%This happens as supporting different consistency models and/or invariants may have impacts on how dynamic partitioning works, thus we need to make sure our partitioning algorithm can cope with different consistency guarantees.
 
-Results obtained during the course of this work will be published in top-venue conferences.
-At the moment, a submission to VLDB is being prepared, hence the extensive evaluation work already done.
-We plan to do other submissions to other conferences.
-Interesting publication targets besides VLDB include, for example, OSDI, SOSP, EuroSys, PODC and DISC.
+%Results obtained during the course of this work will be published in top-venue conferences.
+%At the moment, a submission to VLDB is being prepared, hence the extensive evaluation work already done.
+%We plan to do other submissions to other conferences.
+%Interesting publication targets besides VLDB include, for example, OSDI, SOSP, EuroSys, PODC and DISC.
+
+Further results obtained during the course of this work will be published in top-venue conferences.
+Aside from our submission to VLDB, we expect more papers coming from our planned contributions.
+Interesting publication targets aside from VLDB include, e.g., OSDI, SOSP, EuroSys, Sigmod, PODC and DISC.
 
 
 %Self TODO: justify small testing periods with all the preparation already done with TPC-H to support testing
