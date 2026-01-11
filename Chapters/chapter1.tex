@@ -19,23 +19,29 @@
 
 %"The Introduction should include a short summary of the major issues behind the proposed research, and provide the context of those issues within a broader background (not only in academic, but also in industrial and social terms, if possible). It may already provide a glimpse of the problems and challenges you intend to solve and the kind of results you expect to obtain, in general terms. After reading the Introduction, anyone should get an intuitive grasp of what the research issues are and why they are relevant."
 
-In the current days, new services and applications appear online everyday.
-Billions of devices are connected to the Internet, interacting between themselves in different forms.
-Applications such as Spotify, Netflix, Instagram, Amazon, Youtube, to mention but a few, operate in a scale unimaginable a couple of years ago, with dozens of millions of users active everyday.
-Supporting world-wide scale applications has several implications.
-First, users expect services to be fast - studies show that even a slight increase to reply time can lead to considerable profit losses \cite{dynamo, eiger, gomez, Schurman2009latency}.
-Second, services are expected to be available 24/7, despite failures happening frequently.
-%Third, services must work correctly at all times - data should be consistent everywhere despite concurrent data modifications.
-Third, services must work correctly at all times - data should always be consistent.
-To cope with those requirements, world-wide services deploy multiple data centers (each with many servers) spread around the world.
-%These implications demand for world-wide scale services to have multiple data centers (each with multiple servers) spread around the world.
+%In recent years, new services and applications have been appearing online every day.
+%Billions of devices are connected to the Internet, interacting with each other in many different ways.
+%Applications such as Spotify, Netflix, Instagram, Amazon, Youtube, just to mention a few, 
+%now operate at a scale that was unimaginable only a few years ago, with tens of millions of users active every day.
+Modern online services operate at unprecedented scale. Applications such as Spotify, Netflix, Instagram, Amazon, and YouTube serve 
+hundreds of millions of active users daily across the globe. Supporting such world-wide applications requires deploying multiple data centers, each containing many servers, distributed across continents.
+%
+These global-scale services face three critical requirements. First, performance: users expect fast responses, and studies show that even slight latency increases lead to significant profit losses~\cite{dynamo, eiger, gomez, Schurman2009latency}. Second, availability: services must remain accessible 24/7 despite inevitable hardware failures and network partitions. Third, consistency: data must remain correct and consistent at all times, even under concurrent updates from geographically distributed users.
 
-As the scale of the services increases, so does the amount of data.
-Traditionally, data is replicated everywhere, thus as the amount of data centers increases, so does the number of copies of each data.
-This increases storage, networking and processing costs, as data must be kept up-to-date everywhere.
-Depending on the system consistency guarantees, this may also slow down user's operations, 
+%Supporting such world-wide scale applications has several implications.
+%First, users expect services to be fast - studies show that even a slight increase in response time can lead to considerable profit losses~\cite{dynamo, eiger, gomez, Schurman2009latency}.
+%Second, services are expected to be available 24/7, despite frequent failures.
+%%Third, services must work correctly at all times - data should be consistent everywhere despite concurrent data modifications.
+%Third, services must work correctly at all times - data should always remain consistent.
+%To cope with these requirements, global services deploy multiple data centers (each with many servers) spread around the world.
+%%These implications demand for world-wide scale services to have multiple data centers (each with multiple servers) spread around the world.
+
+As the scale of these services grows, so does the volume of data they manage.
+Traditionally, data is replicated everywhere, thus as the number of data centers increases, so does the number of copies of each data.
+This increases storage, networking, and processing costs, as data must be kept up-to-date in all locations.
+Depending on the system consistency guarantees, replication may also slow down user's operations, 
 %due to having to wait for faraway data centers to confirm the operations.
-due to the time required for faraway data centers to confirm operations \cite{caerus,mdcc,detock}.
+due to the time required for distant data centers to confirm updates~\cite{caerus,mdcc,detock}.
 
 % First, to ensure a fast and smooth access to the services, multiple data centers (and even more servers) spread across the world are needed.
 %Third, users expect the services to be fast. 
@@ -56,69 +62,78 @@ due to the time required for faraway data centers to confirm operations \cite{ca
 %Situations like this can happen due to the distributed nature of the services and must be avoided whenever possible.
 
 \section{Motivation and challenges}
-A key insight is that in many large scale services, specially if world-wide, 
-%In some services, specially for ones distributed around the world, 
+A key insight is that in many large-scale services, especially when deployed world-wide,
 data does not need to be replicated everywhere.
 For instance, consider an e-commerce application with world-wide coverage.
-The information regarding Portuguese customers, as well as stock of products in Portugal, does not need to be replicated everywhere - it is unlikely to be relevant outside of Europe.
+The information regarding Portuguese customers, as well as stock of products in Portugal,
+does not need to be replicated everywhere --- it is unlikely to be relevant outside of Europe.
 Thus, it can be replicated in European data centers and, e.g., North American ones for fault tolerance purposes.
-With this, we reduce the following costs: storage (each data center holds less data), network (updates of an object are only sent to a subset of the data centers) and processing (less updates in total for each data center to process).
-The method of replication in which each data center only replicates a subset of the system's data is known as partial replication.
-Partial replication is not a holy grail though - multiple issues arise when data is not replicated everywhere.
+With this, we reduce the following costs: storage (each data center holds less data), network (updates of an object are only
+sent to a subset of the data centers) and processing (fewer updates in total for each data center to process).
+The method of replication in which each data center only replicates a subset of the system's data is known as
+\emph{partial replication}.
+However, partial replication is not a holy grail -- multiple issues arise when data is not replicated everywhere.
 
-First, under partial replication, maintaining application properties (invariants) valid at all times is rather challenging. %Actually, it should be said here that it is EVEN MORE CHALLENGING in partial replication than it already is in full replication. Albeit most of the challenge comes from weak vs strong consistency (which I don't talk about), and not as much full vs partial.
-E.g., consider an invariant regarding sales of tickets for a concert across multiple sale spots - we may want to ensure we do not sell more tickets than the capacity of the venue.
+First, under partial replication, maintaining application properties (invariants) valid at all times is challenging.
+For example, consider an invariant regarding sales of tickets for a concert across multiple sale spots: we may want to ensure that
+we do not sell more tickets than the capacity of the venue.
 The data regarding those sales may be spread across different data centers.
-Different levels of consistency or coordination may be required to ensure correctness, depending on the criticality of an operation. \todo{Honestly, I do not know where (in this Motivation subsection) should this part of invariants be. Suggestions are welcome.}
+Depending on the criticality of the operation and the desired guarantees, different levels of consistency or coordination may be
+required to preserve such invariants.
+We return to data safety and invariants in more detail in Section~\ref{subsec:invariants}.%
 
-Second, the replication algorithm running in each data center must know, for each object it replicates, which other data centers also replicate said object.
-This can be difficult to dealt with, as the partitioning may change over time and the distribution of objects may not be uniform across data centers - that is, each data center may replicate different subsets of data, potentially with overlaps.
-E.g., DC1 replicates object 'A' and 'B', while DC2 replicates 'A' but not 'B' and DC3 replicates 'B' but not 'A'.
+Second, the replication algorithm running in each data center must know, for each
+object it replicates, which other data centers also replicate that object.
+This can be difficult to deal with, as the partitioning may change over time and the distribution of objects
+may not be uniform across data centers -- that is, each data center may replicate different subsets of data, potentially
+with overlaps.
+For example, DC1 replicates objects \textit{A} and \textit{B}, while DC2 replicates \textit{A} but not \textit{B} and DC3 replicates \textit{B} but not \textit{A}.
+Keeping an accurate and efficiently maintainable description of these replica sets is essential to avoid both unnecessary communication and missed updates.
 
-%In fully replicated systems, an already challenging problem is keeping certain properties (invariants) of the system valid at all times - e.g., ensuring the amount of tickets sold for a given concert across multiple sale spots is not above a certain value.
-%With partial replication, this problem is even more complicated as data referent to those sale spots may be partitioned across different data centers.
-%Different levels of consistency or coordination may be required depending on the criticality of an operation.
 
 Furthermore, supporting transactions under partial replication is challenging.
-On one hand, a transaction may span objects that are all present in the origin data center, but whose objects are spread across different places in other data centers, as in the example above \cite{spanner}.
-One solution would be to send the entire transaction to all data centers with at least one of those objects, but this would be inefficient.
-It is thus necessary to design an algorithm capable of analysing a transaction and sending only the necessary information for each server, while still ensuring data is kept consistent everywhere.
-A proper algorithm will both reduce the amount of data sent and processing required in the receiving end.
-%A proper algorithm will allow for a reduction on the amount of data sent, and thus also on the processing needed in the receiving end.
+On one hand, a transaction may span objects that are all present in the origin data center, but whose replicas are spread across
+different places in other data centers, as in the example above~\cite{spanner}.
+A naïve solution would be to send the entire transaction to all data centers with at least one of those objects, but this would be
+inefficient.
+It is thus necessary to design an algorithm capable of analysing a transaction and sending only the necessary information
+to each server, while still ensuring that data is kept consistent everywhere.
+A suitable algorithm will both reduce the amount of data sent and the processing required on the receiving side.
 
-%Queries
-%Another problem arises with both queries and updates.
-Another problem arises regarding transactions.
-Even with an optimal partitioning scheme, which is a difficult problem on its own, sometimes a client may issue transactions to a data center where some operations are for objects not replicated %in said datacenter.
-locally \cite{sipre}.
+Even with an optimal partitioning scheme, which is a difficult problem on its own, clients may sometimes issue transactions to
+a data center where some operations are for objects not replicated locally~\cite{sipre}.
 This poses many difficulties.
-One could consider splitting a transaction, sending each part to one data center.
-But this may require coordination, increasing latency. 
-It is also difficult to ensure consistency of data read in different places without %increasing latency even further.
-further increasing latency.
-Another solution would be to still execute the transaction as a whole, but have the data center starting the transaction coordinate/fetch the necessary information in some form.
+One could consider splitting a transaction and sending each part to one data center, but this may require coordination, increasing
+latency.
+It is also difficult to ensure consistency of data read in different places without further increasing latency.
+Another solution would be to still execute the transaction as a whole, but have the data center starting the transaction
+coordinate and fetch the necessary information in some form.
 However, this still leads to the aforementioned problems.
-In fact, if this kind of transactions are common, it may even be better to fall back to full replication. %than to deploy any of the aforementioned solutions.
-Thus, a better alternative consists in creating mechanisms to reduce the frequency of cross data centers transactions.
-Regardless, any system employing partial replication must consider this issue. %Is it clear? Here I mean the issue of "cross data centers transactions"
+In fact, if this kind of cross data center transactions are common, it may even be more practical to fall back to full replication.
+Thus, a better alternative consists in creating mechanisms to reduce the frequency of such cross data center transactions.
+Regardless, any system employing partial replication must explicitly address this issue.
 
-The issue above is further exacerbated when we consider complex recurring queries, specially analytic or OLAP queries~\cite{dbtoaster,viewSelection,sioulas2023real}.
+The challenge above is further exacerbated when we consider complex recurring queries,
+especially analytic or OLAP queries~\cite{dbtoaster,viewSelection,sioulas2023real}.
 In analytic queries, often large amounts of data need to be processed~\cite{clickhouse, analyticdb}.
-For instance, in an e-commerce system, one may want to query the "top 10 most sold products world-wide''.
-This kind of queries are essential to make well-informed business decisions~\cite{clickhouse, hadad}.
-If a product suddenly becomes very popular, supply chains may need to be reinforced quickly to maintain stock, and it may be wise to make the product easier to find in the application.
-However, to compute this kind of information, a large sum of data needs to be processed - potentially sales of all products.
-Yet the query must be answered quickly and correctly - if not, the relevant business decision may happen too late, leading to profit losses or negative impact on customer satisfaction.
-% and thus miss a big opportunity for profit, or negatively impact customer satisfaction.
-%Yet, the query must be answered quickly and efficiently - if not, the relevant business decision may be done too late and a big opportunity for profit may have been missed, or customer satisfaction may be impacted.
-This problem is already quite interesting and challenging even under full replication, as it is difficult to process large sums of data (long-executing query) while keeping results consistent and without hindering ongoing queries and updates \cite{analyticdb}.
-Partial replication complicates this problem ten-fold, as now the necessary data is spread across many different and faraway data centers.
-%Partial replication complicates this problem ten-fold, as now the necessary data is not present in one data center but instead spread across many faraway data centers.
-Proper mechanisms are essential, as coordinating long-executing queries across faraway data centers is not viable \cite{clickhouse}.
+For instance, in an e-commerce system, one may want to query the ``top 10 most sold products world-wide''.
+This kind of queries is essential to make well-informed business decisions~\cite{clickhouse, hadad}.
+If a product suddenly becomes very popular, supply chains may need to be reinforced quickly to maintain stock, and it may
+be wise to make the product easier to find in the application.
+However, to compute this kind of information, a large amount of data needs to be processed --- potentially sales of all products.
+Yet the query must be answered quickly and correctly; otherwise, the relevant business decision may happen too late,
+leading to profit losses or negative impact on customer satisfaction.
+This problem is already challenging under full replication, as it is difficult to process large volumes of data (long-executing
+queries) while keeping results consistent and without hindering ongoing queries and updates~\cite{analyticdb}.
+Partial replication complicates this problem further, as the necessary data is now spread across many different and faraway
+data centers.
+Proper mechanisms are essential, as coordinating long-executing queries across faraway data centers is not viable~\cite{clickhouse}.
 
-In short, bringing partial replication to large scale, world-wide distributed applications is essential to reduce operating costs of systems and keep them scalable.
-However, partial replication arises new issues due to data not being available everywhere and further exacerbates already existing problems and challenges.
+%In short, bringing partial replication to large-scale, worldwide distributed applications is essential to reduce operating costs and maintain scalability. 
+%However, partial replication introduces new challenges due to data not being available everywhere and further exacerbates existing problems and challenges. 
+%In the next section, we outline our proposed approach to address these challenges in a practical geo-distributed database system.
 
+In summary, partial replication is essential for cost-effective, large-scale geo-distributed applications, but it introduces significant technical challenges. Data is no longer uniformly available, complicating invariant preservation, transaction processing, replication coordination, and analytical query execution. In the following sections, we present our approach to addressing these challenges through a combination of novel replication algorithms, transaction protocols, and materialized view mechanisms, integrated into a practical geo-distributed database system called PotionDB.
 
 %OLD TEXT
 %Unfortunately, situations as the one described above can happen, where users may observe anomalies in system behaviour.
@@ -157,138 +172,55 @@ However, partial replication arises new issues due to data not being available e
 
 \section{Proposed solution}
 
-\todo{I think I might be giving too many details, and also some repetition. But it is difficult - replication, transaction and views are all too connected.}
-\todo{Should I maybe say ``some of the aforementioned issues''?}
+%In our work, we propose a geo-distributed database system that supports partial replication and addresses the challenges identified in the previous section.
+%At a high level, our solution has three main pillars:
+We propose PotionDB, a geo-distributed database system designed from the ground up to support partial replication efficiently. Our solution rests on three main pillars that directly address the challenges outlined above:
+(i) a replication scheme tailored to partial (and possibly non-uniform) replication to reduce storage, network and processing costs;
+(ii) a transactional layer that offers multiple consistency levels and supports invariants over partially replicated data; and
+(iii) a materialized view subsystem that makes complex, recurring analytic queries efficient even when data is partitioned across many data centers.
+These components are integrated into a full database prototype that we will use both as a proof-of-concept and as a platform for experimental evaluation.
 
-In our work, we plan to tackle the aforementioned issues.
-In general terms, we intend to design algorithms optimized for partial replication which address the challenges previously mentioned.
-We also aim to implement a geo-distributed database with partial replication that shows our vision and implements our algorithms, which will be used both as a proof-of-concept and to evaluate our algorithms.
+The first pillar is a replication and partitioning scheme designed specifically for partial replication.
+Instead of replicating every object everywhere, our system decides which data centers should hold each object, combining partial replication with ideas from non-uniform replication to further reduce costs.
+The replication protocol must keep track of which data centers replicate each object, adapt to reconfiguration and rebalancing, and ensure that updates are propagated only where necessary.
+By doing so, we aim to significantly reduce storage and network overhead, while still providing the redundancy required for fault tolerance and low latency.
 
-Starting from the end, we aim to provide materialized views \cite{viewSelection} as part of our answer to recurring, analytic queries regarding large amounts of data.
-Materialized views will hold the necessary data to answer the query efficiently.
-For example, one can define a view that contains the list of the most sold products.
-Our provision of materialized views will be novel, as they will be operating under partial replication - namely, our views will be able to relate/summarize data that may be partitioned across multiple data centers, without any single entity that has all the data necessary to fully compute the view.
-This implies developing algorithms which keep the view up-to-date and consistent, despite partial replication of the necessary data.
-Efficiency of view updating is also essential, as materialized views are often considered expensive to maintain. %Citation?
+The second pillar is a transactional and consistency layer that can operate correctly over this partially replicated state.
+We plan to support interactive, read–write transactions that may touch objects whose replicas are distributed across different partitions and data centers.
+Our design builds on weak and causal consistency models~\cite{dynamo, cops, walter, understandingEC, cure, saturn}, which are well suited for geo-distributed systems but are notoriously hard to program against due to exposed anomalies.
+In our prototype, we will deploy causal consistency as the baseline model and extend it to handle both base data and materialized views.
+On top of this, we intend to offer stronger guarantees when needed, so that applications can choose different consistency/latency trade-offs for different operations.
+A central goal is to support application-level invariants (such as non-negative stock or capacity constraints) despite partial replication and weak consistency, by combining suitable consistency levels with invariant-preserving mechanisms.
 
-The replication and transactional algorithms we will need to design and implement will also be both novel and challenging.
-Not only they will have to coupe with partial replication (which has the challenges mentioned previously), an even more interesting challenge comes in how to support view updating without all the necessary data being present in one data center.
-This implies that our replication algorithm will have to ensure views are kept up-to-date whenever a relevant object is updated, even if many replicas of the view do not replicate said object.
-Our transactional algorithm will also have to ensure the views stay consistent with the objects they refer to, in order to avoid animalities which affect user experience and application development.
-Thus, our algorithms need not only to cope with partial replication, but also with the challenge of providing views with a global scope under the scenario of partial replication.
-Furthermore, we also have to tackle common issues of materialized views, namely storage and maintenance costs by, e.g., incorporating non-uniform replication in our replication algorithm and using appropriate data types to hold the necessary view data.
+The third pillar is a materialized view subsystem aimed at serving complex, recurring analytic queries efficiently.
+These views summarize or pre-aggregate data spread across many partitions and data centers, so that queries such as ``top 10 most sold products world-wide'' can be answered quickly and without centralizing all raw data.
+We plan to design algorithms that maintain these views incrementally and keep them up-to-date and consistent, even when the underlying base data is partially replicated.
+This requires deciding how to place and replicate the views themselves, how to route updates efficiently, and how to avoid long-running cross–data center computations.
+Efficiency of view maintenance is crucial, as materialized views are often seen as expensive to keep current in large-scale systems.
 
-Finally, in order to ensure latency optimality of transactions, weak consistency \cite{understandingEC, session, cops, dynamo, walter} will be used.
-However, it is hard to program on top of weak consistency systems, as many anomalies are exposed to the programmer \cite{understandingEC}. 
-Thus, in our prototype, we will deploy causal consistency \cite{cure, saturn} and extend the model to our views.
-Furthermore, we will reinforce our consistency guarantees with invariants that will be maintained by specialized data types and mechanisms, as well as offering different levels of consistency - both of which must support partial replication and views.
-Finally, our system will support both SQL \cite{sequel} and a key-value interface, which must be intercompatible.
-This by itself is already quite challenging, as SQL is very expressive. \todo{Note: I did not motivate the need for SQL/key-value interface in the previous subsection.}
-All these mechanisms are essential to ensure our algorithms and mechanisms are as practical and accessible as possible to developers.
+Finally, we will embody all these mechanisms in a practical geo-distributed database implementation.
+The system will expose both a key–value interface and an SQL interface~\cite{sequel}, which must interoperate over the same underlying data.
+This dual interface is important: key–value operations are well suited for low-level, latency-sensitive access, while SQL provides a more expressive and familiar interface for complex queries and application development.
+Our aim is to make the underlying replication, transactional and view mechanisms as transparent as possible to application developers, while still allowing them to control the main performance and consistency trade-offs.
 
-\todo{Is an expected contributions subsection necessary? In a way it is already described what will be our main contributions, and Chapter \ref{cha:research_statement} will detail this more anyway}
+\section{Expected contributions}
 
-\subsection{Expected contributions}
-
-Given the aforementioned challenges and proposed solution, we expect the main contributions of the work to be:
+Some of the goals outlined above have already been partially addressed, while others are part of ongoing or future work.
+At the end of this PhD, we expect the following main contributions, which will be further developed in Chapter~\ref{cha:research_statement}:
 
 \begin{itemize}
-	\item Design and implementation of algorithms for efficient geo distributed replication, combining partial and non-uniform replication to reduce network, storage and processing costs;
-	\item Design and implementation of a transaction algorithm supporting multiple consistency levels;
-	\item A solution for analytic queries spanning high amounts of data though the usage of materialized views.
-	Views may span data partitioned across many servers and data centers.
-	Views must also stay consistent and up-to-date despite weak consistency;
-	\item Provision of useful correctness guarantees to application developers, both through employment of useful consistency models and invariants;% (the latter is quite challenging under weak consistency and partial replication);
-	\item A database implementation of all algorithms developed in this work. Our database will provide varied and rich data types well suited for geo distributed applications.
-	\item A rich database interface with support for both SQL and key-value style access, extended with useful operations. %My idea was to mention our key-value interface is not only "get and set", but rather we provide many operations appropriate for each data type.
-	%If can fit, maybe should mention @ evaluation?
+  \item The design and implementation of algorithms for efficient geo-distributed partial (and non-uniform) replication, reducing storage, network and processing costs compared to full replication, including mechanisms for version management and garbage collection, and support for dynamic re-partitioning of data;
+  \item The design and implementation of a transaction protocol that supports multiple consistency levels over partially replicated data and can be combined with application-level invariants;
+  \item A solution for analytic queries over large data volumes based on materialized views.
+        Views may span data partitioned across many servers and data centers, and must remain up-to-date and consistent despite weak consistency and partial replication, with automatic and incremental view maintenance so that developers do not need to update views manually;
+  \item The provision of useful correctness guarantees to application developers, through the combination of appropriate consistency models and explicit support for invariants under partial replication;
+  \item A geo-distributed database prototype that implements the proposed algorithms and offers rich data types suitable for large-scale, geo-distributed applications;
+  \item A rich database interface with support for both SQL and key–value access, providing operations appropriate for each data type and allowing applications to combine both styles in a single system.
 \end{itemize}
 
+\section{Document Organization}
 
-%In our work, we aim to provide a solution for geo-distributed systems in which low latency is essential, while still providing a useful set of features and guarantees.
-%Due to this requirement, our solution is set in the ``world'' of weakly consistent solutions.
-%More precisely, in our work we aim to provide the algorithms and methods required to provide a fully functional database that is adequate for a geo-distributed scenario where performance and low latency are crucial.
-%We also will provide an implementation and evaluation of said algorithms and database.
-%In general terms, we plan to address the aforementioned issues as follows.
-%
-%To tackle the increasing costs as the number of data-centers increase, we will design and implement a replication algorithm which combines both partial \cite{spanner} and non-uniform \cite{nonUniform} replication.
-%This new algorithm will reduce the amount of data stored in each server, giving application developers freedom on where to replicate each object by making usage of partial replication.
-%It will also reduce the amount of data that needs to be traded between servers and processed. Non-uniform replication will help further reducing these costs.
-%
-%To tackle the limited interface of weak consistent systems and ease application development, we will implement many data types appropriate for widely distributed systems, as well as design some new ones.
-%We will also provide support for read-write, interactive, transactions.
-%These kind of transactions are widely considered useful yet are only common in strongly consistent systems, as their implementation under weak consistency is challenging.
-%
-%Another form by which we aim to improve user experience and application development is through strengthening consistency guarantees.
-%Our solution will provide causal consistency \cite{cops}, a form of weak consistency which prevents some concurrency anomalies from occurring.
-%We also aim to provide other forms of consistency, in order for applications to be able to do trade offs between performance and consistency guarantees.
-%We intend to support transactions with different consistency levels happening in parallel, as even the same application may have different consistency/latency needs depending on the type of operation.
-%
-%Furthermore, we intend to support invariants, as it is crucial for the correct working of some applications.
-%For example, on an e-commerce application, if two users concurrently try to buy the last unit of a product, only one must succeed.
-%Invariants can help ensure this by, e.g., defining an invariant which states the stock is non-negative.
-%
-%Finally, and one of the main goals of this work, is to provide a solution to analytic, recurring queries in weakly consistent systems.
-%In fact, our solution aims to serve those queries, which may span millions of data items spread across many servers, in near real time, as if they were ``normal'' queries.
-%For this goal, we will develop algorithms to provide support for materialized views, which will provide the necessary information to answer said queries instantly.
-%The main challenges with providing materialized views consists in keeping views and their referred items consistent, even under weak consistency, while allowing views to refer to data that may be spread across multiple partitions in different servers.
-%Another relevant challenge consists in defining appropriate data types to efficiently provide the necessary summaries/representations of data for the views.
-%
-%\section{Expected contributions}
-%
-%Some of the previously mentioned goals have already been achieved, while others are in progress or future steps to take in our work.
-%At the end of this work, we expect the following main contributions, which will be further developed in Chapter 3:
-%
-%\begin{itemize}
-%	\item Design and implementation of algorithms for efficient geo distributed replication, combining partial and non-uniform replication to reduce network, storage and processing costs;
-%	\item Design and implementation of a transaction algorithm supporting multiple consistency levels;
-%	\item A solution for analytic queries spanning high amounts of data though the usage of materialized views.
-%	Views may span data partitioned across many servers/data-centers.
-%	Views must also stay consistent and up-to-date despite the lack of strong consistency;
-%	\item Provision of useful correctness guarantees to application developers, both through employment of useful consistency models and invariants (the latter is quite challenging under weak consistency);
-%	\item A database implementation which provides useful and varied data types well suited for both applications and geo distribution.
-%	The database will also support the algorithms developed in this work and serve as means of evaluating their performance.
-%\end{itemize}
-
-\section{Document organization}
-
+The rest of this document is organized as follows. First, Chapter~\ref{cha:research_context} covers and analyzes the state-of-the-art in relevant fields. 
+Afterwards, Chapter~\ref{cha:research_statement} discusses in detail the challenges and goals of this work, covering both challenges and goals already addressed and future work. 
+Finally, Chapter~\ref{cha:work_plan} outlines the plan for the remaining time of this PhD, namely the timeline for each of the remaining goals.
 The rest of this document is organized as follows.
-First, Chapter \ref{cha:research_context} covers and analyses the state-of-the-art in relevant fields.
-Afterwards, Chapter \ref{cha:research_statement} discusses in detail the challenges and goals of this work, covering both challenges/goals already addressed and future work.
-Finally, Chapter \ref{cha:work_plan} outlines the plan for the remaining time of this PhD, namely the timeline for each of the remaining goals.
-
-
-
-
-%- Motivate the research topic
-%- What are the challenges/issues we are trying to solve? Provide a broad context (academic, industrial, social)
-%- Can provide a glimpse of problems and challenges that are intended to be solved; also possible expected results, in general terms
-%- The idea is that after reading the Introduction, anyone should know what are the research issues/challenges and why they are relevant
-
-%Start with some generic topic
-%Motivate the problem - problems of existing solutions? Strong consistency, geo-replication, etc.
-%Mention weak consistency and then mention views/analytic queries
-%Maybe mention some other solutions for the analytic queries problems and their shortcomings (check paper)
-%Mention our approach
-%Mention the issues to solve
-	%May want to include mentioning invariants/different consistency levels to really make the system ``usable''
-%Mention challenges and contributions? Mix both existing ones and upcoming ones. If needed, explain that on later sections it will be clear which ones are already achieved and which ones are yet to be achieved.
-%Organization
-
-
-
-
-
-
-
-%\textbf{DISCLAIMER - THE PARAGRAPH BELOW IS ``RANDOM TEXT'' - I came up with it while writing the section of geo replication. I leave it here as it may be useful for either the Introduction or Research Statement chapters.}
-%
-%In PotionDB, the main goal is to be able to provide mechanisms allowing quick reply of demanding but recurring queries that concern large amounts of data.
-%For example, in a worldwide e-commerce system, obtaining the ``top 10 sold products worldwide'' is a challenging query, as this requires knowing the amount of sales of all products.
-%For such a system, it is ideal for it to be geo-distributed (to ensure low latency to all clients) and partially replicated (it is undesirable for e.g. data of all clients, sales and local stocks to be replicated everywhere).
-%Under this scenario, replying to the aforementioned query is very difficult, as no server has all the required data.
-%Strong consistency is also not desirable, as this query would involve all data-centers, which could make a transaction for this query take a long time and possibly abort multiple times.
-%Thus, in PotionDB, we propose to provide materialized views under a partially geo-replicated database, providing causal consistency.
-%More precisely, we aim to provide materialized views with a global view of the data, without requiring all data necessary for the view to be replicated in one place.
-%Queries targeted at those views must also be able to complete by executing locally in any of the servers replicating said view.
-

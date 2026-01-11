@@ -1,1231 +1,642 @@
-%!TEX root = ../template.tex
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% chapter2.tex
-%% NOVA thesis document file
-%%
-%% Chapter with the template manual
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\typeout{NT FILE chapter2.tex}%
-
 \chapter{Research Context}
 \label{cha:research_context}
 
-\todo{Is an Introduction like this okay? Or is just mentioning what will be discussed in this chapter enough?}
+In this research work we propose a geo-replicated, weakly consistent database,
+named PotionDB, which provides reliable access to complex analytical queries with
+very low latency. Achieving this goal requires combining and building upon several
+concepts and techniques from distributed systems and databases. Many alternative
+solutions exist for each of these dimensions, so it is important to understand the
+design space in order to make informed choices.
 
-In this research work we propose to provide a geo-replicated, weakly consistent database named PotionDB which provides reliable access to complex analytical queries in near instant time.
-Achieving this goal requires combining and leveraging on multiple concepts, for which multiple solutions exist and thus it is necessary to make informed choices and leverage on existing solutions/concepts.
-This chapter discusses such concepts.
-%Achieving this goal requires combining and leveraging on multiple concepts,
-%To achieve this goal, multiple concepts need to be combined and leveraged on,
- %e.g., view maintenance, replication, consistency.
-%For each concept, multiple different solutions exist and thus it is necessary to make informed choices and leverage on existing solutions/concepts.
-
-%We discuss such concepts in this chapter, which is organized as follows.
-The chapter is organized as follows.
-Section \ref{sec:cap} describes the CAP theorem, laying the foundations to the diversity of solutions for data storing.
-Section \ref{sec:consistency} discusses how storage systems handle data consistency.
-Section \ref{sec:replication} introduces multiple concepts related with data replication, raging from synchronization to data representation and distribution. 
-Section \ref{sec:data_access} focuses on databases and efficient query provisioning, closing up with a discussion of existing solutions that apply the concepts introduced in this chapter.
-We also discuss relevant choices we have made in our system regarding these concepts.
-
-%Nowadays the internet is full of services, raging from entertainment purposes to e-commerce, information, business and others.
-%Some of these services have a global scale with millions of users, with servers distributed around the globe.
-%These services must be fault tolerant, provide low latency, high throughput, present data consistently and scale as the service grows in number of users.
-
-%The aforementioned goals can often enter in conflict, thus many systems focus only on some of those goals.
-%In this work we plan to 
-
-
-\todo{Note: I am not sure if I should had talked about Antidote/Cure in high detail or not. I talked a bit about Cure on the Existing Systems subsection, is that enough, or does Antidote/Cure deserve a section of its own?}
-
-\todo{Do I need to make more of a connection between the topics and PotionDB? E.g. motivate what we will be doing, how our solution is different/better, etc.?}
+This chapter surveys the main concepts that underpin our work and positions
+PotionDB within the state of the art. Section~\ref{sec:cap} recalls the CAP
+theorem and explains how it shapes the design of distributed data stores.
+Section~\ref{sec:consistency} reviews consistency models, with a focus on weak and
+causal consistency. Section~\ref{sec:replication} discusses replication strategies,
+including partial and non-uniform replication and their use in geo-distributed
+settings. Finally, Section~\ref{sec:data-access} focuses on data access, queries,
+and mechanisms to speed them up, and surveys existing systems that are most
+closely related to PotionDB. Throughout the chapter we highlight the design
+choices we adopt in PotionDB.
 
 \section{CAP theorem}
 \label{sec:cap}
 
-\todo{Should the CAP theorem be included under consistency section, or leave it as it is?}
+In an ideal world, distributed systems would provide strongly consistent data, be
+always available, and keep operating correctly even in the presence of failures and
+network partitions. In practice, this is not possible. The CAP theorem~\cite{gilbert2002brewer}
+states that in the presence of network partitions, a distributed system can provide
+at most two of the following properties:
 
-In an ideal world, distributed systems would all provide strongly consistent data, be always available and keep operating even in the presence of failures and network partitions.
-However, the CAP theorem \cite{cap} states that it is only possible to, at most, provide two out of the three following properties:
-\begin{enumerate*}[label=(\roman*)]
-	\item Strong \textbf{C}onsistency - all replicas of a system must provide the same view of the data at any given time;
-	\item \textbf{A}vailability - the system is capable of providing a reply to every client's request at any point in time;
-	\item \textbf{P}artition-tolerance - the system keeps operating and evolving state correctly even in the presence of message loss and network partitions.
-\end{enumerate*}
+\begin{itemize}
+  \item \emph{Strong Consistency}: all replicas of a system present the same view of
+        the data at any given time;
+  \item \emph{Availability}: every request received by a non-failing node eventually
+        receives a response;
+  \item \emph{Partition tolerance}: the system continues to operate and evolve its
+        state correctly despite message loss and network partitions.
+\end{itemize}
 
-Typically, since network partitions are common on systems distributed across multiple regions \cite{understandingEC}, the choice tends to be between providing Strong Consistency or Availability.
-It is noteworthy that one does not need to choose ``all or nothing'' \cite{understandingEC}. 
-Systems providing \textbf{C}onsistency and \textbf{P}artition-tolerance (CP), can still be available in the presence of some faults, but will eventually stop to evolve state if too many nodes fail or too many messages are lost \cite{cap}.
-On the other hand, systems providing \textbf{A}vailability and \textbf{P}artition-tolerance can still provide some consistency guarantees, known as Weak Consistency. However, the replicas will diverge at times and conflicting states may be observed due to the concurrent execution of operations \cite{understandingEC}.
+Because network partitions are common in systems deployed across multiple
+regions~\cite{bailis2013eventually}, partition tolerance is generally non-negotiable.
+The practical design choice is therefore between maximizing strong consistency
+or maximizing availability.
+
+The CAP theorem should not be interpreted as forcing an all-or-nothing choice.
+Systems that are classified as CP (Consistency + Partition tolerance) can still be
+available in the presence of some failures, but will eventually stop accepting
+operations if too many nodes fail or communication is severely disrupted in order
+to avoid inconsistent states~\cite{bailis2013eventually}. Conversely, AP systems
+(Availability + Partition tolerance) can still provide meaningful consistency
+guarantees, often grouped under the umbrella of \emph{weak consistency}, but must
+tolerate temporary divergence between replicas and may expose conflicting states
+to applications~\cite{bailis2013eventually}.
+
+PotionDB targets geo-distributed deployments where network partitions and high
+latencies are unavoidable. We therefore embrace partition tolerance and high
+availability, and build on weak consistency models that provide useful guarantees
+while avoiding the coordination costs associated with strong consistency.
 
 \section{Consistency}
 \label{sec:consistency}
 
-In the literature, a plethora of consistency models have been specified \cite{linearizability, si, spanner, understandingEC, cops, dynamo, cassandra}, each one providing different guarantees to the developers in terms of the states that can be observed, as well as different requirements to deploy such models.
-Despite the variety of models, they can be grouped as either being a form of \emph{Strong Consistency} or \emph{Weak Consistency}.
+A wide range of consistency models has been proposed in the literature
+(e.g.,~\cite{bernstein1987concurrency,herlihy1990linearizability,spanner,bailis2013eventually,occi2012causal,decandia2007dynamo,terry1994session}).
+Each model offers different guarantees on which states can be observed by clients,
+and imposes different implementation costs and deployment restrictions. Despite
+this variety, most models can be broadly classified as providing either some form
+of \emph{strong} consistency or some form of \emph{weak} consistency.
 
 \subsection{Strong consistency}
-\label{subsec:strong}
+\label{sec:strong-consistency}
 
-In strong consistency models, all clients observe the same state of the system independently of the replica contacted by the client(s).
-%In order to achieve this, 
-To achieve this, it is necessary to totally order all write operations executed in the system, which requires coordination among the different replicas \cite{linearizability,spanner,caerus,mdcc,detock,chainreaction}.
-%Depending on the configuration of the system, even to execute a single read operation, many replicas may need to be contacted. %Citation?
-Depending on the system configuration, even to execute a single read operation it may be needed to contact a majority of replicas or a master replica \cite{spanner,slog}.
-This is necessary in order to ensure the client always reads the latest correct state.
-%This is necessary as at any point it must be ensured that the client reads the latest state.
+Under strong consistency, all clients observe the same state of the system
+independently of which replica they contact. Achieving this generally requires a
+total order on write operations, enforced via coordination among replicas
+(e.g., consensus protocols or total order broadcast)~\cite{bernstein1987concurrency,herlihy1990linearizability,spanner,lamport2001paxos,corbett2013spanner}.
+Depending on the system design, even read operations may need to contact a
+majority of replicas or a designated master replica to ensure they observe the
+latest committed state~\cite{spanner,berenson1995critique}.
 
-The strong requirements of coordination imply that strongly consistent systems, in order to tolerate network partitions, may have to come to an halt (unavailable) when enough replicas can not be contacted to execute an operation, in order to prevent state divergence or incorrect values being returned \cite{sconekv,cure,chainreaction,dynamo}.
-Furthermore, the costs of synchronization can be prohibitively high for large scale systems, specially if replicated across the globe, as latency for operations quickly racks up \cite{caerus,mdcc,detock}.
-Also, due to the total order requirement, it is often difficult to scale to a high number of clients and maintain high throughput under contention \cite{bargain,dynamo}.
-On the other hand, strongly consistent systems tend to be easier to develop applications on than weaker consistency, as they are easier to reason about and do not expose consistency anomalies \cite{spanner,sconekv,slog,chainreaction,dynamo}.
+These coordination requirements imply that strongly consistent systems must
+compromise on availability in the presence of failures or partitions: to prevent
+divergence or incorrect results, operations may have to block or be rejected when
+enough replicas cannot be reached~\cite{bailis2013hatrack,bailis2013eventually}.
+Moreover, in geo-distributed settings, the cost of coordination across distant
+data centers can be prohibitively high; round-trip times quickly dominate
+operation latency~\cite{corbett2013spanner,bailis2013eventually,tilley2013cloud}
+and can limit throughput under contention~\cite{bailis2013hatrack}.
 
-A few models implementing strong consistency have been proposed in the literature \cite{linearizability,si}, such as: serializability, linearizability and snapshot isolation.
-Recent research focuses on lowering the number of round trips (RTTs) needed for transaction execution, as well as leveraging on batching, data locality and other similar techniques, in order to reduce commit latency and improve throughput \cite{sconekv,caerus,detock,slog,tdsql}. %Should I add that another goal (by leveraging on data locality) is to reduce the number/percentage of geo-distributed/multi-DC transactions/commits? But in a way, that's reducing commit latency and improving throughput.
-%Multiple models implementing strong consistency have been proposed in the literature \cite{linearizability, si}: serializability, linearizability and snapshot isolation to name a few.
+On the positive side, strong consistency makes it easier to develop correct
+applications: programmers can reason about a single, globally ordered sequence of
+operations and are not exposed to many of the anomalies that appear under weaker
+models~\cite{adya1999weak,bailis2014coordination}. Classical strong models include
+serializability, linearizability and snapshot isolation~\cite{bernstein1987concurrency,herlihy1990linearizability,berenson1995critique}.
+Recent work on strongly consistent systems has focused on reducing the number of
+cross-replica round trips, exploiting data locality, and using batching and
+pipelining to reduce commit latency and improve throughput~\cite{spanner, corbett2013spanner,mu2014,wolf2016calvin}.
 
 \subsection{Weak consistency}
-\label{subsec:weak}
+\label{sec:weak-consistency}
 
-Weak consistency models are considerably more relaxed in terms of requirements compared to strong consistency \cite{understandingEC}.
-As such, they also provide weaker guarantees, making them harder to reason about and build applications on \cite{bargain,sconekv,slog,cops,cure,chainreaction,dynamo}.
-Indeed, concurrent updates on the same objects may lead to undesired results or values.
-%Replicas' state may diverge, with read anomalies and ``illogical'' (in the context of an application) states being observed \cite{bargain,detock,slog,cops,cure,dynamo}.
-Replicas' state may diverge, with read anomalies and inconsistent states being observed \cite{bargain,detock,slog,cops,cure,dynamo}.
-For example, in a group communication system, under some consistency models, user A may see user B replying to user C's message before he even sees user C's message.
-This can be very confusing to the users.
-However, the weaker requirements of weakly consistent systems gives potential to many advantages compared to strong consistency: better fault tolerance (operations keep executing even under network partitions), lower latency and higher scalability in both throughput and number of clients \cite{slog,cops,cure,dynamo,bargain}.
+Weak consistency models relax the requirements of strong consistency in exchange
+for better availability, lower latency and higher scalability~\cite{bailis2013eventually,terry1994session,decandia2007dynamo,occic2012causal}.
+They allow replicas to diverge temporarily and may expose anomalies such as stale
+reads, non-monotonic observations, or surprising re-orderings of operations.
+Reasoning about application correctness becomes more challenging, since
+concurrent updates to the same objects may lead to unintuitive results, and
+clients may observe inconsistent intermediate states~\cite{adya1999weak,bailis2013eventually}.
 
-One of the most basic consistency models is eventual consistency \cite{understandingEC}.
-In short, eventual consistency provides only one guarantee: when updates stop occurring, eventually the state of the replicas will converge.
-However, several issues are left in the open - e.g., what happens when the same object is concurrently updated? Which states can be observed on reads? How do the states evolve as updates are being applied?
-Thus, many other weak consistency models have been studied in the literature \cite{understandingEC, session, cops, dynamo, cassandra, walter, pnuts}, e.g. causal consistency, causal+, monotonic reads, read committed, per record sequential, PSI, etc.
+A minimal and widely deployed model is \emph{eventual consistency}~\cite{bailis2013eventually,decandia2007dynamo}.
+It guarantees only that if updates stop, replicas will eventually converge to a
+common state, but does not constrain which intermediate states can be observed
+or how conflicts are resolved. This raises many questions: how are concurrent
+updates to the same object handled; which values can a read return; and how does
+state evolve while updates are being propagated?
 
-Causal consistency \cite{cops,eiger,chainreaction,cure} is of particular interest as it provides useful guarantees.
-In a general form, causal consistency ensures that operations casually related \cite{lamport2019time}, i.e. in which one happens before the other, are seen according to said order by every client.
-This means that, e.g., a read that happens after a write must reflect the effects of said write.
-With causal consistency, the aforementioned example of group communication system would no longer be possible - user A would always see user B's reply after seeing user C's message, as they are causally related \cite{lamport2019time, walter}.
+To provide more structure, several stronger but still weak models have been
+studied~\cite{bailis2013eventually,occi2012causal,terry1994session,adya1999weak,zawirski2015eventual,lamport1978time}.
+Among them, \emph{causal consistency} is particularly attractive. It guarantees
+that operations that are causally related (in the sense of Lamport’s happened-before
+relation~\cite{lamport1978time}) are seen in a compatible order by all clients:
+for example, a read that happens after a write must reflect the effects of that
+write~\cite{occi2012causal,bailis2013eventually}. This avoids anomalies such as
+seeing a reply to a message before seeing the message itself in a group
+communication system.
 
-\todo{Any system that provides causal consistency on the level of a single object only? I couldn't find any other than... a CRDT itself. (I do not think PNUTS counts as single-object causality, as some authors call it "same-key sequential consistency")}
+Causal consistency can be enforced at the level of individual objects or across
+multiple objects~\cite{bailis2013eventually}. Cross-object causality is more
+demanding, as dependencies between updates to different objects must be tracked,
+but greatly simplifies application logic. For instance, in an online shopping
+system where users subscribe to restock notifications, we want the notification
+to be causally ordered after the restocking operation so that users do not see a
+notification before the product is actually available.
 
-Causality can be provided either in the context of a single object (i.e., causality between different objects is not ensured) or between multiple objects \cite{understandingEC}.
-The former is tougher/costly to maintain, as an order needs to be maintained between potentially all objects, but more useful.
-For example, in a online shopping system which allows users to track when a product is restocked, 
-%it is desirable 
-we want
-for the notifications sent to the users to be causally related with the restocking action, as we do not want users to receive the notification before they can see the product in stock.
-%For this use case, causality between objects is useful.
-For this use case (as well as the group communication example, among others), causality between objects is very useful and eases application development.
+Causal+ consistency extends causal consistency by guaranteeing that replicas
+eventually converge by resolving conflicts deterministically in all replicas~\cite{occic2012causal,bailis2013eventually}.
+Other useful weak models include monotonic reads~\cite{terry1994session}, which
+ensure that consecutive reads of the same object never move backwards in time,
+and snapshot-based models such as snapshot isolation (SI) and its variants,
+which provide a consistent snapshot per transaction but still allow certain
+anomalies~\cite{berenson1995critique,yu2000practical}.
 
-Causal+ consistency \cite{cops,chainreaction,cure} extends causal consistency by ensuring replicas do not diverge forever, through techniques that solve concurrency conflicts deterministically in all replicas.
-%Causal+ consistency \cite{cops,chainreaction,cure} still applies the same ideas of causal consistency, but also ensures the replicas do not diverge forever, by applying techniques to solve concurrency conflicts deterministically in all replicas.
-By definition, causal consistency does not ensure replicas converge \cite{cops,chainreaction}.
+Snapshot Isolation (SI) offers each transaction a consistent snapshot of the
+database: reads never block and always see a self-consistent state, and write
+conflicts are detected at commit time, requiring coordination and a total order
+on committing transactions~\cite{berenson1995critique}. Parallel Snapshot Isolation
+(PSI) relaxes this by allowing transactions in different replicas to commit in
+different orders~\cite{walter}. PSI is attractive for geo-distributed systems, as it
+can provide strong guarantees for transactions that access a single replica,
+while still allowing high throughput and low latency in many cases; however,
+coordination is still required in some scenarios.
 
-Monotonic reads \cite{session, understandingEC} gives one simple to understand guarantee: consecutive reads on the same object must always return the same value or a more recent value.
-This means that after a value is read, it is not possible to read again an older value.
-It is however possible to read stale data, or keep reading the same value despite more recent values existing.
-In distributed systems, it is important to define if this guarantee is given at a single server level or across servers, as the latter may imply having to wait for data to arrive and be processed if the client issues reads in different servers.
+\paragraph{Consistency in PotionDB.}
 
-Snapshot Isolation (SI) is an interesting model.
-%The intuition behind SI is that each transaction sees a consistent view of the database \cite{si}.
-%To be more precise, it sees a ``snapshot'', where all the objects are at the same version and the database is in a consistent state.
-The intuition behind SI is that each transaction sees a consistent view of the database \cite{si} - a ``snapshot'', where all objects are at the same version and the database is in a consistent state.
-Under SI, the transactions in a replica are totally ordered, thus preventing concurrency conflicts when updating the same objects.
-This implies coordination is required to commit a transaction.
-In SI, reads on a transaction are executed on a snapshot, never blocking.
-Writes are applied on a higher version when the transaction commits, if no other transaction that committed in the meantime modified the same object(s).
-However, some anomalies can still occur under SI.
-E.g., consider objects 'c' and 'd', and transactions 'A' and 'B'.
-Consider now that both transactions read 'c' with value of 5. 
-If transaction 'B' updates 'c' to 10, and transaction 'A' reads 'c' and copies the value of 'c' to 'd', both transactions can commit.
-However, it is possible for 'B' to be ordered before 'A' and yet, end up with 'c' = 10 and 'd' = 5.
-This would not be possible under serialization.
+PotionDB builds on these ideas by providing PSI extended with commutative sets
+(csets), as proposed in Walter~\cite{walter}, together with causal+ consistency for
+transactions that span different servers. Causality is tracked across objects and
+across servers, so that when a client observes an update to an object, it also
+observes the corresponding updates to related objects and views.
 
-Parallel Snapshot Isolation (PSI) extends SI by allowing transactions issued in different replicas to commit in different orders \cite{walter}.
-%Parallel Snapshot Isolation (PSI) is an extension of SI that allows transactions issued in different replicas to commit in different orders \cite{walter}.
-PSI is useful for weak consistency systems, as they can provide strong guarantees when clients access only one server and, e.g., causality between updates on different replicas, thus still allowing high throughput and low latency in some cases.
-However, under PSI, coordination may still be needed for some transactions, as PSI guarantees there are no write conflicts.
-\todo{I do criticize this hybrid approach in the geo replication section.}
-
-Sovran et. al. \cite{walter} define PSI+cset as an extension of PSI.
-This extension states that if all operations of a given data type are commutative between themselves (e.g., a counter with only increment and decrement), then updates on objects of said data type never conflict.
-%This extension notes that if an object's data type operations are all commutative between themselves (e.g., a counter with only increment and decrement), then updates on 
-%This extension notes that if two concurent updates to the same object are done with operations that are commutative (e.g., an increment and decrement of a counter), then there is no write-conflict and thus both transactions can commit.
-
-\todo{Is this paragraph ok? Or should I say something like "PotionDB will provide (...)"?}
-In PotionDB we provide PSI+cset, with causal+consistency (hereafter causal consistency) for transactions executed in different servers.
-We provide causality even if the client contacts a different server. \todo{Is "We provide causality even if the client contacts a different server" clear? My intention: when a client stops contacting its server and contacts a different one, causality is still kept, as he/she will ask for a snapshot more recent than the last one he/she observed.}
-Our causality guarantees are cross object.
-The views in our system are directly co-related to data of other objects, thus when a client observes a change in one of such objects, it must also observe the corresponding change in the views.
-Causality between objects and views is very challenging in PotionDB's scenario, as data is partially replicated.
-Thus, views can be related to objects of different partitions, without a single server having said view and all of its objects.
-%Thus, it is possible for views to be related to objects of different partitions, without a single server having said view and all of its objects.
-Causality must still be ensured despite this difficulty.
-In PotionDB synchronization is never required to commit a transaction, as all our objects only support commutative operations - thus there are no write conflicts. \todo{Should this last phrase be in this subsection, or on the next one, after I talk about CRDTs?}
-
-%In PotionDB we provide PSI, with causal+ consistency (hereafter causal consistency) for transactions executed in different servers. Our causality guarantees are cross object.
-%The views provided in our system are directly co-related to the data of other objects, thus it is desirable that when a client observes a change in said objects, they can also observe the change in the views.
-%We provide causality even if the client contacts a different server.
-%Note that providing causal consistency is specially challenging in PotionDB's scenario, as data is partially replicated.
-%Thus, it is possible for views to be related with objects of different partitions, and there not exist a single server which has both the view and all said objects.
-%Causality must be ensured despite such difficulty, i.e., causality between objects that are not even replicated in the same server.
-
-To accommodate use cases in which higher throughput is desirable and causality is not needed for the read, we also provide monotonic reads as long as the client is sticky to one server.
-Note that even with monotonic reads, in PotionDB the client only observes states generated by committed transactions.
-%We note that even in this scenario, the client always reads state left by some committed transaction, i.e., there is no interference from ongoing transactions. %i.e., no dirty reads, read commited.
+Because our data types are implemented as CRDTs (see
+Section~\ref{sec:crdts}), all update operations are commutative. This eliminates
+write conflicts between concurrent transactions and allows transactions to commit
+without synchronization across data centers. To support use cases where even
+higher throughput is desirable and full causal ordering is unnecessary, PotionDB
+also supports monotonic reads for clients that remain sticky to a single server.
+Even in this mode, clients only observe states produced by committed
+transactions.
 
 \subsection{CRDTs and other conflict resolution techniques}
-\label{subsec:crdt}
+\label{sec:crdts}
 
-\todo{After talking about PSI in detail (namely that it does not allow write conflicts) and that with cset extension there is no conflicts, maybe this section is a bit confusing?}
-\todo{A possible idea would be to say in the previous section that we provide PSI (and not mention @ commutativity), and then here detail that actually we provide the PSI+cset extension}
-%CRDTs/operational transformation
-Both with eventual and causal consistency, concurrent updates on the same objects can occur and lead to conflicts \cite{understandingEC}.
-For instance, if an element is concurrently added and removed from a set, it is not clear what should be the final state.
-Concurrency conflicts need to be dealt with, in order for all replicas' state to converge.
-Solutions for handling conflicts can range from preventing them through coordination (as in PSI without csets), totally ordering operations following some criteria (e.g., using logical clocks and replica IDs), letting the user/application deal with the conflicting state (e.g., in a register with concurrent writes, use application logic to decide which value to stay) or forcing all operations to be commutative (if operations commute then the result will be the same, independently of the order by which they are applied).
+In weakly consistent systems, concurrent updates to the same objects are common
+and can lead to conflicts~\cite{bailis2013eventually}. For example, if an element
+is concurrently added to and removed from a set, or if multiple writes to a
+register occur at the same time, the final state is not obvious. To ensure that
+replicas converge, conflicts must be resolved deterministically.
 
-In PotionDB we make usage of CRDTs \cite{crdt} to represent our datatypes.
-CRDTs, or \textbf{C}onflict-Free  \textbf{R}eplicated \textbf{D}ata \textbf{T}ypes, are data types designed to be used in large-scale distributed systems offering weak consistency.
-Concurrency conflicts are solved by the CRDT itself, by designing operations to be commutative.
-Updates and reads can execute locally without synchronization, with all replicas of a CRDT eventually converging.
-Updates get propagated asynchronously.
-This allows for high availability and low latency on accessing CRDTs, as it is even possible to cache CRDTs on the client-side \cite{legion, swiftcloud, castineira2015collaborative}.
-Multiple policies for handling conflicts are available for the same datatypes, allowing CRDTs to more easily adapt to the needs of each application \cite{crdtMultipolicy, crdt}.
+Several approaches exist. Conflicts can be prevented through coordination (e.g.,
+using strong consistency), operations can be totally ordered using logical clocks
+and replica identifiers, or conflicting versions can be handed to the
+application for resolution. A more scalable and developer-friendly approach is
+to design the data types themselves so that all relevant operations commute.
 
-Alternative solutions based on commutativity have been studied in the literature. 
-One such solution is RADTs (\textbf{R}eplicated \textbf{A}bstract \textbf{D}ata \textbf{T}ypes) \cite{radt}, which are similar to CRDTs but with more limited conflict resolution policies.
-Another solution is OT, \textbf{O}perational \textbf{T}ransformation \cite{ot, otCorrectness}.
-The intuition behind OT is that conflicting operations can, when arriving on a replica, be ``transformed'' to be commutative and thus not conflict.
-However, it is usually considered harder and more error-prone to design said transformations instead of, as in CRDTs, designing operations to be commutative from the start \cite{otCorrectness, crdt}.
-We believe CRDTs' ease of use and flexibility with solving conflicts justify its usage over OT-based solutions in PotionDB.
+PotionDB adopts CRDTs (Conflict-free Replicated Data Types)~\cite{shapiro2011conflictfree}
+for its core data types. CRDTs are designed for large-scale, weakly consistent
+systems: they guarantee that, when all updates have been delivered, all replicas
+will converge to the same state, even under arbitrary re-orderings and
+duplications of messages. Updates and reads can be served locally without
+synchronization, enabling high availability and low latency; updates are
+propagated asynchronously in the background~\cite{shapiro2011conflictfree,baquero2017state,crdt-caching}.
 
+CRDTs come in two main flavours: state-based and operation-based. In state-based
+CRDTs, replicas periodically ship their state (or deltas) and merge states using
+a join operation on a monotonic semi-lattice; in operation-based CRDTs, replicas
+propagate the effect of operations and rely on commutativity and appropriate
+delivery guarantees~\cite{shapiro2011conflictfree,baquero2017state}. Multiple
+policies can be supported for the same abstract type (e.g., different semantics
+for sets), increasing flexibility~\cite{shapiro2011conflictfree}.
+
+Other commutativity-based approaches exist. RADTs (Replicated Abstract Data
+Types)~\cite{preguicarpadt} share similarities with CRDTs but offer fewer
+conflict-resolution policies. Operational Transformation (OT)~\cite{ellis1989concurrency,sun1998operational}
+transforms operations upon delivery so that they commute, but designing correct
+transformations is often more complex and error-prone than designing CRDT
+operations to be commutative from the outset~\cite{shapiro2011conflictfree}. We
+therefore base PotionDB on CRDTs, leveraging their well-understood semantics and
+rich toolbox of existing designs.
 
 \section{Replication}
 \label{sec:replication}
 
-%Must talk here about replication, partial replication, non-uniform replication and geo replication. May also have to talk here about op vs state based CRDTs and potentially state machine replication.
-
-In distributed systems, replication is essential to ensure data is available at multiple sites.
-Depending on the system, replicating data may lead to better fault-tolerance, lower operation latency and higher scalability or throughput %and/or lower latency when accessing data, as well as higher scalability
-\cite{cure,bargain,eiger,asymmetric}.
-However, it also implies higher storage, network and computational costs \cite{sipre}.
-
-It is thus essential to tailor replication specifically to the system's intended use-case.
-%It is thus important to tailor replication specifically to the intended use-case of the system.
-Factors like consistency model, fault model, read/write ratio, access patterns, types of operation and geo-distribution of the servers affect the choice on how to efficiently replicate data.
-As will be seen in this section, 
-in PotionDB we combine ideas from multiple replication concepts to provide a novel replication model tailored for PotionDB's use case.
+Replication is central to distributed systems: it improves availability, fault
+tolerance and latency, but also increases storage, network and processing
+costs~\cite{abbadi1990faulttolerant,decandia2007dynamo}. The choice of replication
+strategy must take into account the consistency model, failure assumptions,
+access patterns, and deployment (e.g., within a single data center or across
+continents). In PotionDB we combine several replication concepts to obtain a
+model tailored to our geo-distributed, partially replicated setting.
 
 \subsection{Synchronous and asynchronous replication}
-\label{subsec:syncAsync}
 
-\todo{Are the definitions here of synchronous and asynchronous replication clear and accurate?}
+In \emph{synchronous} replication, an update is considered complete only after it
+has been replicated to and acknowledged by a subset of replicas (often a
+majority)~\cite{tanenbaum2006distributed}. This is common in strongly consistent
+systems, which rely on protocols such as Paxos or state-machine replication to
+totally order operations and ensure that replicas remain up-to-date and do not
+diverge~\cite{lamport2001paxos,schneider1990implementing,spanner}. While this
+provides strong guarantees, it increases operation latency—especially when
+replicas are far apart—and limits availability, since operations may block or
+fail if enough replicas cannot be contacted~\cite{corbett2013spanner,bailis2013eventually}.
 
-In synchronous replication, an update is only considered completed after it has been replicated to other replicas and acknowledged by a subset (often majority) of them \cite{epoch}.
-%In synchronous replication, an update must be replicated and confirmed by a subset of other replicas (usually a majority) before the update is considered completed.
-%In synchronous replication, an update must be replicated to other replicas and confirmed by a subset (usually a majority) of those replicas before the update is considered completed.
-This is usually applied by strongly consistent systems in order to keep the replicas up-to-date and avoid concurrency conflicts \cite{dynamo, spanner,bargain,detock}.
-These systems usually employ protocols such as Paxos \cite{paxos} or Total Order Broadcast \cite{tob} to totally order the operations, or a ``master-slave'' model to sort operations in one place \cite{sipre,mdcc,detock,slog}.
-These mechanisms, together with synchronous replication, ensure no operations are lost and clients always read the latest, correct state~\cite{spanner,mdcc,sconekv,epoch}.
-%Combining these mechanisms with synchronous replication allows to ensure that no operations are lost and clients always read the latest, correct state \cite{spanner}.
+In \emph{asynchronous} replication, an update may be confirmed locally before it
+is propagated to other replicas~\cite{tanenbaum2006distributed}. This is a natural
+fit for weakly consistent systems, allowing operations to complete with low
+latency and enabling higher throughput. Replication can be performed in the
+background, possibly batching multiple updates for efficiency~\cite{decandia2007dynamo,occi2012causal}.
+The downside is that replicas can diverge and conflicts must be handled, as
+discussed previously.
 
-\todo{Is it worth it to make a small section to present more information on state machine replication and paxos?}
+PotionDB adopts asynchronous replication, which aligns with its weak consistency
+model and geo-distributed setting: avoiding cross–data center coordination on
+the critical path is essential for low latency and high availability.
 
-In asynchronous replication, an update may be confirmed before being sent to other replicas \cite{epoch}.
-This approach is ideal for weakly consistent systems, enabling swift confirmation of operations to clients \cite{cops,cure,sconekv}.
-Replication occurs in the background, possibly deferred to promote batching with other operations for efficiency \cite{dynamo, cure}.
+\subsection{Operation- and state-based replication}
 
-Synchronous replication provides strong guarantees regarding state evolution of  systems, ensuring updates are not lost and data is always consistent.
-However, having to wait for the confirmation of other replicas 
-%not only
-limits fault-tolerance \cite{spanner,caerus,mdcc,sconekv}
-%but also raises operation latency
- and increases operation latency when replicas are faraway, making it unusable for geo-distributed systems or latency-sensitive operations \cite{slog,bargain,epoch,walter}. %TODO: There's many, many papers in geo-replication + strong consistency. In fact, later in geo-replication I mention what some systems do to deal with this high latency. So maybe I should not say "unusable" here.
-%scenarios where low latency is essential \cite{slog}.
-Asynchronous replication enables lower latency and higher throughput, as operations are confirmed locally without waiting for other replicas \cite{cure,bargain,cops}. %If need more space, cut the part after "locally"
-%Asynchronous replication can lead to lower latency and higher throughput executing operations, due to not having to wait for other replicas' replies.
-It also has lighter network requirements.
-However, state diversion and concurrency conflicts may arise from lack of replica coordination
-%, which needs to be dealt with 
-and must be addressed
-\cite{dynamo,mdcc,bargain,cops}.
-While asynchronous replication may lead to more fault-tolerant systems \cite{dynamo,cassandra,cure}, namely in the presence of network partitions, replica failure may result in data loss, as some confirmed updates may not have been yet replicated. %controversially it makes the fault detection more difficult, as replicas can take unbounded amounts of time to reply \cite{cap}.
-%It can also lead to loss of updates when a replica fails, as these updates may not yet have been replicated.
+An important design choice is how to propagate changes to replicas. Two broad
+approaches are commonly distinguished~\cite{shapiro2011conflictfree}:
 
-\todo{Either here or in Research Context I should mention we make usage of async replication and explain why (avoid latency increase from geo-replication; better fault tolerance; sync not needed for our use-case)}
+\begin{description}
+  \item[State-based replication.] Replicas periodically send their entire state,
+        or a compact representation of it, to other replicas, which merge it with
+        their local state. If merges are monotonic and idempotent, and all
+        replicas eventually receive sufficiently recent states, convergence is
+        guaranteed.
+  \item[Operation-based replication.] Replicas propagate the operations (or
+        their effects) that were executed locally. Receiving replicas apply these
+        operations to their local state, subject to ordering and delivery
+        guarantees required by the consistency model.
+\end{description}
 
-\subsection{Operation and state based replication}
-\label{subsec:operationStateReplication}
+Both approaches have advantages and limitations. Operation-based replication can
+lead to many small messages when updates are frequent, whereas state-based
+replication may be too expensive for large objects, as even small changes require
+sending large states. Optimizations exist in both cases: operations can be
+batched, and state-based approaches can send only deltas between states, as in
+delta-CRDTs~\cite{baquero2017state,gomes2017delta}.
 
-Replicas can be kept up-to-date in different forms.
-One important decision is on how to propagate changes to objects' state.
-In the literature, solutions for propagating changes are usually grouped as either \emph{state-based} or \emph{operation-based} \cite{crdt}.
-
-\todo{Should this section be more CRDT-focused (as in, the case of CRDTs in particular) or generic (the generic concept of state-based/op-based replication)}
-\todo{Should this subsection be here in Replicaton or together with CRDT section?}
-
-\paragraph{State-based \cite{crdt}.} Updates are propagated by sending the entire object state to other replicas.
-If updates happen concurrently in multiple replicas, the coming state may have to be merged with the existing state, so that the effects of operations in the existing state are not lost.
-Merges and state propagation must be done in such a way that it is guaranteed that, eventually, all replicas converge to the same state.
-Extra care must be taken when applying consistency models stronger than eventual consistency - e.g., in causal consistency, merges must preserve causality \cite{understandingEC}.
-%Extra care must be taken when applying consistency models stronger than eventual consistency - e.g., in causal consistency, merges must ensure causality is kept\cite{understandingEC}.
-
-\paragraph{Operation-based \cite{crdt}.}
-Updates are propagated by directly sending operations or their effects to other replicas.
-Receiving replicas must then apply the operations or effects on their own objects.
-Depending on the consistency model, a delivery and/or appliance order may be required - e.g., causal or total order.
-Care must also be taken with message duplication.
-Moreover, all relevant operations must be delivered everywhere and concurrency conflicts must be handled properly to prevent states from diverging forever.
-%Care must be taken on how these operations are handled - depending on the consistency model, these operations may have to be delivered and applied according to some order, e.g., causal order or even total order.
-%It must also be ensured that every relevant operation is delivered everywhere, and conflicts from concurrency are handled properly to avoid states diverging forever.
-
-%Updates are propagated by directly sending operations or their effects to other replicas. The receiving replicas apply these operations or effects to their own objects. Proper handling of these operations is critical—depending on the consistency model, they may need to be delivered and applied in a specific order, such as causal or total order. Additionally, it must be ensured that all relevant operations are delivered to all replicas, and concurrency conflicts are resolved to prevent permanent state divergence.
-
-\paragraph{CRDTs \cite{crdt}.}
-CRDTs are classified based on their type of propagation: state-based CRDTs and operation-based CRDTs (op-based CRDT), respectively.
-
-In state-based CRDTs, ensuring eventual state convergence requires that the ordered states of an object form a monotonic join semi-lattice, and the merge operation must compute the least upper bound \cite{crdt, stateCRDT}. The intuition is that, for any two states, a merged state can be calculated that is not older than either of the merging states, and reflects the effect of all operations applied on both states.
-Since states can be merged in any order, eventual delivery of states to every replica is enough.
-%Note that it is not necessary for every single state to be delivered, but rather, enough recent states that ensure, when updates stop happening, that all replicas reach the most, and same, up-to-date state.
-In practice, not every single state must be delivered, but rather, enough recent states that ensure that, when updates stop happening, all replicas converge into the latest, correct state.% reflecting the effect of every operation applied so far.
-
-In op-based CRDTs, every update must be delivered to all replicas.
-If all operations are commutative and idempotent, eventual delivery suffices.
-Often, only concurrent operations are commutative and thus casual delivery is required from the network \cite{understandingEC}. 
-%Furthermore, if not all operations are commutative (usually it is only required for concurrent operations to be commutative), then casual delivery is required from the network.
-
-\paragraph{Shortcomings and optimizations.}
-Both approaches have shortcomings.
-Operation propagation can overwhelm a system with numerous small messages when updates are very frequent, while state propagation can be too costly with big states, resulting in large messages even for minor state changes.
-%Operation propagation can overwhelm a system if updates happen too often (too many small messages), while propagating states can be too expensive with big states, leading to big messages for every small state change.
-%Optimizations can be done for both cases.
-Both approaches can be optimized.
-For op-based, operations can be batched in a single message and applied in a row.
-%%In some situations, multiple operations can be merged into one (e.g., increments of a counter). %I thought Albert did this but no, I did not find reference to this in his thesis.
-For states, it is possible to calculate differences between states (delta) and send instead only the differences. 
-%For states, it is possible to calculate differences of states (delta) and send those differences instead of the whole state.
-This solution has been studied in the literature \cite{deltaAlmeida, deltaVan}, with CRDTs based on deltas being known as delta-CRDTs. Delta-CRDTs present considerable reductions on message size compared to state-based CRDTs, but also have complex specifications \cite{deltaAlmeida}. 
-Also, keeping replicas correctly up-to-date is challenging, specially with causal consistency \cite{deltaAlmeida}.
+PotionDB uses operation-based replication for its CRDT objects, which fits well
+with asynchronous, causally ordered communication and allows us to exploit the
+commutativity of CRDT updates.
 
 \subsection{Partial replication}
-\label{subsec:partial}
-%TODO: Maybe change the title? Something like "Replication scalability?" or just "Partial replication and sharding"
 
-%TODO: On the internal partitioning/external partitioning paragraphs, add between pharentises directly (sharding), (partial replication).
+Many distributed storage systems employ full replication: every data center
+replicates the entire dataset~\cite{decandia2007dynamo,cure}. This simplifies
+system design and can provide high fault tolerance and low read latency, but it
+does not scale well as the number of data centers grows. Storage, network and
+processing costs increase linearly with the number of replicas, since every
+update must be processed everywhere~\cite{bailis2013eventually,zhang2013towards}.
 
-Full replication is popular in distributed storage systems \cite{sipre, practi}.
-It enables high fault tolerance by replicating data everywhere, ensuring its safety (and, in some consistency models, its availability) even if several servers crash or are unreachable due to network partitions \cite{cure,epoch,asymmetric}.
-%By replicating data everywhere, data is kept safe (and, in some consistency models, available) even if many servers are unreachable due to network partitions or other failures \cite{cure,epoch,asymmetric}.
-It also allows data to be close to users
-anywhere in the world.
-%However, scalability is limited : as the server count grows, storage, network and processing costs rise as every replica must, respectively, store all data and receive and process every update.
+Two complementary mechanisms are used to mitigate these costs:
 
-However, this approach has limited scalability, \cite{sipre,eiger}: as server count grows, storage, network and processing costs rise as each server stores all data and receives and processes every update.
-For large-scale systems these costs may become %prohibitively high.
-prohibitive.
-The literature proposes two different mechanisms, sometimes combined, to alleviate replication costs:
+\begin{itemize}
+  \item \emph{Internal partitioning (sharding)} divides the dataset across
+        shards within a data center, allowing the system to exploit multi-core
+        hardware and multiple servers and to scale to datasets that no longer
+        fit in a single machine~\cite{decandia2007dynamo,bailis2013eventually}.
+  \item \emph{External partitioning (partial replication)} assigns different
+        subsets of the dataset to different data centers. Each data center
+        stores only a fraction of the objects, often chosen based on data
+        locality or other application-specific criteria~\cite{spanner,walter,zhang2013towards}.
+\end{itemize}
 
-%New topics:
-%Full replication is popular
-%Achieve high fault tolerance as data is replicated everywhere, so data is still accessible (or at least safely stored, depending on the consistency model) even if many servers fail.
-%Simplifies data access as all servers have all data, so clients only contact one server
-%Storage, network and processing costs increase linearly with the number of servers, as all servers store all data, updates are sent everywhere and processed everywhere.
-%Full replication does not tackle the issue of the dataset being too large to fit in a single machine.
-%Two mechanisms proposed to alleviate replication costs/scalability issues
+Partial replication is especially attractive for geo-distributed services with
+strong locality patterns~\cite{walter,zhang2013towards}. For example, in an
+international e-commerce application, data about European customers and sales is
+rarely needed in Asia. Replicating it only in European data centers (plus a few
+others for fault tolerance) reduces storage and update costs significantly.
+Moreover, transactions that access only local data need to coordinate with fewer
+sites, which reduces latency and increases throughput.
 
-%OLD TEXT:
-%Full replication is very popular in distributed storage systems \cite{sipre}. 
-%It allows for potentially high fault tolerance, as data is stored everywhere so many servers can be unavailable and, depending on the consistency model, still have the data reachable or, at least, safely stored.
-%Full replication also simplifies data access, as whenever updates or reads are issued, all data being accessed is present in one place.
-%However, it also comes with downsides: as the number of servers increases, more storage is needed, as all servers store all data.
-%Network and processing power costs also increase, as all servers either process updates to all objects or changes to their states \cite{sipre}.
+However, partial replication raises new challenges. Because no data center holds
+the full dataset, partitioning must be chosen so that most transactions access
+data within a single data center; otherwise transactions frequently need to
+coordinate across data centers, even under weak consistency, which hurts
+throughput and latency~\cite{walter,spanner,zhang2013towards}. Partitioning
+schemes may need to adapt over time as access patterns change, requiring
+efficient mechanisms for migrating data between data centers~\cite{zhang2013towards,irwin2010fly}.
 
-%As the number of servers and/or data centers increases, replication costs may become prohibitively high.
-%In the literature two different mechanisms have been proposed to alleviate the replication costs:
-
-%More topics:
-%Internal partitioning
-%Split the dataset inside each server/data center, allowing the system to scale with multi-core CPUs or number of machines. 
-%The latter allows to deal with datasets too large to fit in a single machine''s storage and reduces the replication overhead as more machines are added.
-% As data is partitioned across machines, acessing multiple partitions or comitting transactions may require coordination. This may be acceptable as inDC latency is low.
-% However, with this mechanism, the whole dataset is still replicated in all DCs (which may be many and far apart), still leading to high storage and replication costs and latency/bandwidth issues.
-
-%External partitioning
-%Each DC replicates a different subset of data
-%Further reduces storage, network and processing costs (keep original phrase)
-%Of interest for large-scale services to keep costs bearables as number of DCs increases.
-%Particular interest for worldwide systems with locality to their data
-%(Give a short e-commerce example)
-%It can also reduce latency in strong consistency systems, as coordination may be regional instead of worldwide.
-%External partitioning must be carefully tuned to avoid cross-DC transactions, as those are very costly, even under weak consistency scenarios.
-%Mention high latency + completely destroys throughput + can lead to deadlocks.
-%Studies have been done regarding automatic repartitioning based on access patterns.
-%If no locality or other similar criteria is present, full replication may be preferred.
-
-\paragraph{Internal partitioning (sharding).}
-Sharding splits the dataset within each server or data center, enabling the system to scale with multi-core CPUs or number of servers, respectively.
-The latter is often used to handle datasets too large to fit in a single machine's storage \cite{clickhouse}.
-It also reduces the growing replication cost associated with high server counts, through it introduces overhead for accessing data across partitions \cite{dynamo, cops, mdcc, epoch}. 
-Furthermore, transaction execution may require synchronization between the shards, but this may be acceptable as latency inside a data center is low \cite{cops, mdcc, detock, h-store}.
-Nonetheless, this model still replicates all data across all data centers, which may be unnecessary and waste storage and network resources, as well as create latency issues.
-
-%TODO: Add citations from below + do external partitioning.
-
-%\paragraph{Internal partitioning.}
-%The idea behind internal partitioning is to split the dataset inside each server/data center, allowing the system to scale with respectively, multi-core CPUs or multiple machines.
-%Internal partitioning in the context of a data center helps reduce the higher replication costs associated with increasing the number of servers, however it also introduces some overhead in accessing data across partitions \cite{dynamo, cops, mdcc}.
-%Synchronization between machines may be needed to execute transactions, but this may be acceptable as latency inside a data-center is low \cite{cops}.
-%While this process already helps in reducing the increasing replication costs, all data-centers still replicate all data (full replication), which may still waste storage and network resources.
-%Internal partitioning is often referred to as ``sharding''.
-%%What did I mean with this...? Maybe remove this phrase or rewrite it.
-%We also include under internal partitioning systems \cite{dynamo} in which each node is responsible for a subset of the data and replicates some other subsets for fault tolerance.
-%Under this replication scenario, however, it is difficult to provide good consistency guarantees or features such as transactions.
-
-\paragraph{External partitioning.}
-With external partitioning, each data center may replicate a different subset of data.
-This allows to further reduce storage, network and processing costs as less data is stored and less updates need to be sent and processed in each data center \cite{spanner, sipre, practi}.
-%This allows to further reduce storage, network and processing costs as, respectively, less data is stored, less updates need to be sent and processed in each data center \cite{spanner, sipre}.
-%The replication mechanism associated with external partitioning is called partial replication.
-External partitioning is often referred as partial replication.
-
-Partial replication is thus of interest for large-scale services to keep replication costs bearable as the number of data centers increases.
-It is especially useful for systems distributed all around the world with data locality \cite{sipre, slog, detock, caerus}.
-E.g., in an international e-commerce application, %data regarding customers, sales and stocks in Europe is likely not relevant in Asia.
-European customers, sales and stocks data is likely not relevant in Asia.
-With partial replication, such data could be replicated only in European data centers and optionally in another region for fault tolerance.
-Additionally, partial replication enables efficient synchronization (e.g., to ensure strong consistency), as transactions regarding European data only need to coordinate with data centers holding said data, instead of all data centers
-%spread world-wide 
-\cite{spanner, sipre, slog, caerus, sconekv}, enabling lower latency and higher throughput.
-%Besides the aforementioned benefits of partial replication, another advantage also comes from this: if synchronization is required (e.g., to ensure strong consistency), transactions regarding European data only need to coordinate with European data centers, instead of data centers spread across the world \cite{spanner, sipre, slog}.
-%This can allow for lower latency and higher throughput.
-
-%On the other hand,
-However, external partitioning needs to be carefully done, factoring in  application context.
-Since each data center does not have the full dataset, 
-it is essential for the majority of transactions to access only data which is within a single data center.
-%As data centers do not have all of the data, 
-%it is essential to ensure that, for most transactions, the data accessed is all in a single data center.
-Otherwise, transactions may need to contact or synchronize with multiple data centers \cite{spanner, sipre, chronocache, slog}, even under weak consistency, which severely hindering throughput and often leading to high latency, resulting in a degraded user experience \cite{eiger, mdcc, LatencyIncrease}.
-%Otherwise, a transaction may require multiple data centers to be contacted and/or synchronized with \cite{spanner, sipre, chronocache, slog}, even under weak consistency models.
-%This severely hinders throughput and often leads to high latency, even under weak consistency models, which negatively affects user experience \cite{eiger, mdcc}.
-Fine-turning the partition scheme is therefore crucial, with research being done to enable systems to adapt to access patterns changes by automatically migrating data between data centers \cite{slog, detock, morphosys, asymmetric, sipre}.
-%Thus, careful fine-tuning of the partition scheme is essential, and studies have been done for systems to self-adjust to changes on access patterns, by automatically migrating data between data centers \cite{slog}.
-If there is no data locality or some other precise partitioning criteria, full replication may be more adequate, specially under weak consistency.
-%If there is no data locality or some other criteria to externally partition data, full replication may be more appropriate, specially under weak consistency.
-
-\todo{Do I need some concluding note here/reference to PotionDB? Is this too much information?}
-
-%Need citation for the disadvantages/shortcoming of partial replication
-%Need citation for the advantages
-%Maybe list all (or some) papers that make use of partial replication
+PotionDB embraces partial replication to keep replication costs manageable
+as the number of data centers grows, while carefully designing its transactional
+and view mechanisms to minimize cross–data center coordination.
 
 \subsection{Geo replication}
-\label{subsec:geo}
 
-Many large-scale Internet services have users spread across the globe, expecting low latency access no matter their location.
-%Which one of the two below sounds better?
-As such, these services require data centers spread worldwide (geo distributed).
-%As such, these services require data centers spread across different geographical locations (geo-distributed).
-We define a system as  geo replicated if it replicates data across faraway data centers.
-Geo replication is challenging due to high latency between faraway data centers, alongside limited bandwidth \cite{mdcc, eiger, chronocache, slog}.
-Availability together with strong consistency is specifically difficult, as previously discussed in Section \ref{sec:cap}.
+Large-scale Internet services often serve users worldwide and therefore deploy
+data centers across multiple continents. We refer to systems that replicate data
+across distant data centers as \emph{geo-replicated}. Geo replication is
+challenging due to high and variable latencies and limited bandwidth between
+data centers~\cite{corbett2013spanner,bailis2013eventually}. Combining strong
+consistency with high availability in such environments is particularly
+difficult, as already discussed in Section~\ref{sec:cap}.
 
-A related concept is wide-area replication.
-In wide-area replication, multiple data centers are still employed, but with limited distance between all data centers (e.g., all located in the United States).
-%A related concept is wide-area replication.
-%Wide-area replication shares similar concepts with geo-replication, namely the existence of multiple data centers in different places. 
-%However the distance is usually somewhat limited (e.g., all data centers located in the United States).
-Some systems in the literature were designed with wide-area replication in mind \cite{spanner, cops, megastore}.
-In this scenario however, coordination between data centers may be acceptable, as latency is still low enough \cite{spanner, AWSLatency} (below 100ms\footnote{For instance: Amazon's AWS servers in the United States have below 75ms latency among themselves, while the European's servers have below 60ms \cite{AWSLatency}.}).
-%Conversely, in geo replication, latency between faraway data centers are in the orders of hundreds of milliseconds, which can easily degrade user experience and drive away users \cite{mdcc, eiger, chronocache} %TODO: citation of google/amazon loss due to latency increase.
-%In this scenario however, having to coordinate with more than one data center may be acceptable, as the latency is still low enough \cite{spanner} (below 100ms\footnote{For instance: Amazon's AWS servers in the United States have below 70ms latency among themselves, while the European's servers have below 50ms.}). %TODO: Add citation for latency (https://www.cloudping.co/grid)
-In geo-replication, this coordination may become prohibitively expensive, as latencies between faraway data-centers are in the orders of hundreds of milliseconds, which can easily degrade the user experience and drive users away users~\cite{mdcc, eiger, chronocache, AWSLatency, LatencyIncrease}.
+In wide-area replication within a single region (e.g., across data centers in
+the same country), cross–data center coordination may still be acceptable, and
+several systems exploit this~\cite{spanner,occi2012causal}. In truly
+geo-distributed deployments, however, round-trip times can easily reach hundreds
+of milliseconds. Systems that rely on multiple cross–data center RTTs per
+operation often incur latencies that are intolerable for interactive
+applications~\cite{bailis2013eventually,corbett2013spanner}.
 
-Given the reasons above, solutions designed with geo-distribution in mind are required.
-Solutions combining strong consistency and geo-replication exist \cite{mdcc, slog, scatter}, but they usually have very high latency, limited availability and sometimes low throughput.
-Some systems try to circumvent those shortcomings \cite{mdcc, chronocache, slog, walter, caerus, detock}, e.g. by leveraging on partial replication, but the problem persists when multiple data centers need to be accessed.
-Additionally, it often comes at the cost of fault-tolerance, as partial replicas of the same data tend to be geographically close \cite{caerus, detock, slog, cockroachdb}.
-Other systems offer strong consistency for transactions within a data center and weak consistency across data centers \cite{cops, eiger, walter}.
-However, this requires applications to deal with issues inherit to weak consistency, as updates are replicated under weak consistency.
-%Solutions offering strong consistency for geo-distributed scenario exist \cite{mdcc, slog}, but they usually have very high latency, reduced availability and possibly low throughput.
-%Some systems try to go around those shortcomings \cite{mdcc, chronocache, slog, walter}, e.g. by making use of locality with partial replication, but they still suffer from the same problems when data from multiple data centers needs to be accessed.
-%Also, they tend to even have more limitations on availability of some data, as the partial replicas tend to be nearby.
-%Other systems offer strong consistency for data access in one data center and weaker consistency for data access across data centers \cite{cops, eiger, walter}.
-%While the trade-off is interesting, it still leads to applications having to deal with issues inherit to weak consistency. E.g., updates done in different data centers will be replicated under weak consistency, thus clients still observe the effects of weak consistency.
-eybog.
-Finally, solutions offering weak consistency are attractive for geo replication, as they tend to cope better with high latency, partial replication and scalability \cite{eiger, cure, walter, dynamo}.
-However, systems offering only eventual consistency (e.g. Dynamo \cite{dynamo}) are hard for application programmers to develop on, due to very weak consistency guarantees.
-Thus, research has been done to bring causal consistency to wide and geo distributed systems \cite{cops, eiger, saturn, cure, walter, chainreaction}, with causality across objects, specially under partial replication, being particularly challenging.
-Weak consistency systems usually provide low latency as they do not require coordination among data centers, but even with causality, applications still need to deal with some consistency animalities \cite{sconekv, epoch}.
+Some systems provide strong consistency in geo-replicated settings, but at the
+cost of high latency, limited availability and often reduced
+throughput~\cite{spanner,mdcc,slog,detock}. Other designs offer strong
+consistency within a data center but weaker guarantees across data
+centers~\cite{occi2012causal,cops,eiger}. Weakly consistent systems that provide
+eventual or causal consistency are generally better suited for geo replication,
+but they shift some of the burden of dealing with anomalies to application
+developers~\cite{decandia2007dynamo,occi2012causal,bailis2013eventually}.
 
-%Finally, solutions offering weak consistency are attractive for geo-replication, as they coupe more easily with high latency, partial replication and are more scalable with the number of users \cite{eiger, cure, walter}.
-%However, some systems offer only eventual consistency (e.g. Dynamo), which is difficult for application programmers to work with due to its very weak guarantees. %TODO: Remove Dynamo and just cite it.
-%Thus, research has been done in trying to bring causal consistency to wide-distributed and geo-distributed systems \cite{cops, eiger, saturn, cure, walter}, with causality across objects, specially under partial replication, being challenging.
-%Weak consistency systems can provide very low latency due to usually not needing to coordinate with other servers, but even with causality, it can be difficult to program applications on top of such systems. %Should cite here the one system that tries to provide a relational view on geo distributed.
-
-%Maybe do not mention @ key-value store, which will only be talked about later.
-%PotionDB is a key-value store which is geo-replicated and allows to provide both partial replication and full replication.
-%System administrators can decide, for each group of objects, if they should be fully replicated or partially replicated, and, in case of the latter, in which servers each group should be replicated in.
-%PotionDB also makes usage of internal partitioning inside each server to make usage of multi-core CPUs.
-%The main challenge of PotionDB consists in providing consistent views that concern global data, under a form of weak consistency (causal consistency) and without all the required data being in a single server.
-%Provisioning of said views should only require interacting with a single server also, to ensure low latency.
+PotionDB is designed from the outset for geo replication under weak consistency.
+It uses asynchronous, operation-based replication, partial replication and
+CRDTs to avoid placing geo-distributed coordination on the critical path of most
+operations.
 
 \subsection{Non-uniform replication}
-\label{subsec:nonuniform}
 
-Partial replication already reduces network and storage costs by reducing the number of replicas of an object.
-However, it does not help with the case of large objects or popular objects with very frequent updates.
-%The usage of partial replication can already reduce networking and storage costs, by reducing the amount of places each object is replicated on.
-%However, it does not help with the case of popular objects that may have a big size or have a lot of updates.
+Partial replication reduces costs by storing fewer replicas of each object, but
+does not address the case of large or highly updated objects. In many
+applications, only a small portion of an object’s state is relevant for reads.
+For instance, a global “top 10 most sold products” leaderboard in a large
+e-commerce system may receive updates for hundreds of thousands of products, but
+only the very top entries matter for reads; the vast majority of updates do not
+change the visible state.
 
-Consider a worldwide e-commerce application, with hundreds of thousands of  products (e.g. Amazon).
-A naive implementation of a ´´top 10 most sold products" leaderboard would keep a counter of total sales per product.
-This would imply that whenever a product is sold somewhere, an update to this leaderboard is generated and then propagated and processed everywhere.
-%A naive implementation of a ``top 10 most sold products" leaderboard would use an object that keeps the sum of how many units each product sold.
-%A naive way to maintain a leaderboard of the ``top 10 most sold products'' would be to use an object which keeps a sum of how many units each product sold.
-%This would imply generating an update for this leaderboard whenever a product is sold somewhere, as well as propagating and processing this update everywhere.
-However, the vast majority of the updates do not change the visible state (the top 10), as updates to products outside the top do not affect leaderboard reads.
-%This would imply having to generate an update for this leaderboard whenever a product is sold somewhere, and have this update be propagated and processed everywhere.
-%However, the vast majority of the updates would not affect the visible state (the top 10) of the leaderboard - updates to an element not on top do not affect the result of reads of the said leaderboard.
+\emph{Non-uniform replication}~\cite{cabrita2017nonuniform} exploits this by
+replicating only the part of the state that affects the visible behaviour of an
+object. Updates that may become relevant in the future are stored locally and
+maybe partially replicated for fault tolerance, while updates that will never
+affect the visible state can be discarded. This reduces storage, network and
+processing overheads for large objects while preserving read correctness.
 
-Non-uniform replication \cite{nonUniform} is useful for such situations.
-With non-uniform replication, only updates that change the visible state of objects are propagated.
-Updates that may be relevant later (e.g., if we remove a product, another one may rise to the top) are locally stored and only partially replicated for fault tolerance purposes, while updates that will never affect the visible state are immediately discarded (e.g., in a max register, adding a value below the max is irrelevant).
-%Updates that never affect the visible state are instantly discarded (e.g, in a max register, adding a value below the max is irrelevant), while updates that may be relevant later (e.g., in a top, if we remove a product, another one may rise to the top) are stored locally and replicated only partially for fault tolerance.
-Thus, non-uniform replication reduces storage, network and processing overheads of large objects, while ensuring read correctness.
-%Non-uniform replication \cite{nonUniform} is useful for situations as the one described above.
-%With non-uniform replication, only updates that may change the visible state of the objects would be propagated.
-%Other updates would only be stored locally (and potentially to a few other replicas for fault tolerance) for the case in which it may become relevant later on.
-%Using non-uniform replication, it is possible to save on both storage and network costs, as less operations are replicated, processed and stored.
-%In some objects, it is even possible to discard operations entirely \cite{nonUniform} - e.g., in an object responsible to keep the max number of sales in a day of a product, any number of sales of a day that is below the max does not need to be propagated and can be discarded.
-%In short, the idea behind non-uniform replication is to reduce the amount of data that needs to be propagated and stored, while still ensuring any query can be served fully at any replica.
+Cabrita et al.~\cite{cabrita2017nonuniform,cabrita2018scalable} propose several
+non-uniform CRDTs, including Top-K and Top-Sum leaderboards, histograms and
+filtered sets. A related notion is \emph{computational CRDTs}~\cite{computational-crdts},
+in which applications are interested only in the result of a computation over the
+state (e.g., an average) rather than in the full state itself. These CRDTs keep
+only the minimal information required to compute the desired result, further
+reducing storage and communication costs.
 
-Cabrita et. al. \cite{nonUniform, nonUniformThesis} propose some non-uniform CRDTs, including designs for Top-K (leaderboard), Top-Sum (leaderboard but supports increments to entries), histograms and filtered set.
-Another related concept is computational CRDTs \cite{computationalCrdt}.
-In computational CRDTs, the client is not interested in the complete state of an object, but rather the result of some computation over the state.
-E.g., in an Average CRDT, only the average is relevant for the client, and not each added value.
-As such, computational CRDTs keep only the strictly necessary information to calculate the result (in this case, the sum of all adds and number of additions), instead of all inserted values, thus reducing storage usage.
-%Namely, they propose Top-K, Top-Sum (similar to Top-K but supports increments to entries), histograms and a filtered set as CRDTs using non-uniform replication.
-%Another concept that is related is computational CRDTs \cite{computationalCrdt}.
-%The idea behind computational CRDTs is that, for some objects, the client is not interested in the actual state of the object but rather the result of some computation.
-%For example, in an object that keeps an average, the client is only interested in the average value - the values of each element that was added to the average is not relevant.
-%Thus, it is not necessary to keep each individual value, but rather enough information to calculate the result (in this case, the sum of all adds and the number of additions).
-
-%Both computational and non-uniform CRDTs are useful for PotionDB.
-%We can leverage on both concepts in order to supply many different kinds of objects, which allow us to provide very rich views or summaries of data. 
-%This, in turn, allows us to efficiently and easily answer many different kinds of queries, keeping the storage and network overheads low.
-%We have already developed new CRDTs based on these concepts, namely a max/min CRDT and an average CRDT.
-%We have also extended the design of TopSum CRDT to support decrements.
-%With the CRDTs already implement, many SQL-like function queries are already supported, such as \emph{order-by}, \emph{group by}, \emph{limit}, \emph{average}, \emph{sum}, etc.
-%We also extended both TopK and TopSum to support extra ``data'' to each entry
-
-%\todo{Not sure if the text above should be here or in the research statement. Also should the research statement include an example of how we convert a query to objects in PotionDB?}
+PotionDB incorporates non-uniform and computational CRDTs to support efficient
+global statistics and analytic queries, as discussed in Chapter~\ref{cha:research_statement}.
 
 \subsection{Replication in PotionDB}
 
-PotionDB is a geo-replicated database that supports both partial and full asynchronous replication.
-System administrators can decide, for each group of objects, which ones are fully or partially replicated, and where.
-Replication is asynchronous and operation-based.
-PotionDB also employs sharding inside each server to leverage on multi-core CPUs.
+PotionDB is a geo-replicated database that supports both full and partial
+asynchronous replication. For each group of objects, system administrators can
+choose whether it is fully or partially replicated and in which data centers it
+should reside. Replication is operation-based and leverages CRDT semantics to
+guarantee convergence.
 
-Finally, PotionDB supports multiple non-uniform and computational CRDTs, including some new ones we designed (e.g., max/min CRDT) and extensions (e.g., adding decrement support to TopSum CRDT).
-We discuss their usefulness in PotionDB in Chapter \ref{cha:research_statement}. \todo{Update this link to the correct section}
-%Their usefulness in PotionDB is discussed in Section \ref{subsec:views}.
-
-%TODO: Should a paragraph like the one below be here? Decide later after more text is rewritten.
-%All of the factors above come in together to answer PotionDB's main challenge - how to provide efficient, consistent views regarding global data, under weak consistency and without a single server having all required data. Furthermore, any queries to those views should have low latency and require only communication with a single server. %Maybe this paragraph should be in the views subsection instead.
-
-%We discuss the usefulness of these CRDTs in PotionDB Section \ref{subsec:views}.
-
-%PotionDB supports multiple non-uniform and computational CRDTs, which are useful to provide efficient,, rich views or summaries of data.
-%This allows PotionDB to efficiently answer complex queries with low storage and network overheads.
-%We have also developed new non-uniform CRDTs, namely a max/min CRDT, and extended the design of TopSum CRDT to support decrements.
- 
-
-%TODO: Subsection that summarizes everything regarding PotionDB?
-
-%Give examples of objects.
-%Talk about computational CRDTs
-%Explain how this helps PotionDB
-
-
-%Idea: reduce storage and network costs (not every data needs to be replicated everywhere). However, still replicate enough data to reply to any query
-
-%Mention about usefulness. Mention about some datatypes, both proposed in the paper and the ones I made. Mention about computacional CRDTs also having similar ideas (I'll need to check a paper on this). In the uniform paper they mention the similarities with computacional CRDTs (and how non-uniform is an extension of it).
-
-%Will have to explain about the differences in states - same observable state vs same state.
-
-%Mention how this can be combined with partial replication. And how it all fits in PotionDB.
-
-%I might have to mention about non-uniform eventual consistency... but I'd rather not.
-
-
-%General introduction about why replication is needed, its usage/beneficts and also costs
-%Then go into each category of replication. Async vs sync? Then geo? Then partial? Then op vs state CRDT and end with non-uniform?
+Within each server, PotionDB shards data across worker threads to exploit
+multi-core CPUs. Across servers and data centers, it combines partial
+replication with non-uniform and computational CRDTs, including new designs
+(e.g., max/min CRDTs) and extensions (such as a Top-Sum CRDT with decrements).
+We return to the details and motivation for these choices in
+Chapter~\ref{cha:research_statement}.
 
 \section{Data access}
-\label{sec:data_access}
+\label{sec:data-access}
 
-%Online services usually require storage solutions to store and manage application's data.
-Online services usually require storage solutions to hold their data.
-Databases are commonly used to store and manage an application's data, with different types of databases offering different guarantees (consistency, durability, etc.) and interfaces for data access.
+Online services rely on storage systems to manage their data. Databases provide
+different guarantees (e.g., consistency, durability) and different kinds of
+interfaces for accessing and manipulating data. While many variants exist, two
+common abstractions are key–value stores and relational databases. Most systems
+can be understood as variants or combinations of these.
 
-While there are many different kinds of database interfaces, the two most common ones are key-value stores and relational databases.
-Most alternatives can be defined as extensions, variants or subsets of these.
+\paragraph{Key–value stores.}
 
-
-
-%Most online services nowadays require storage solutions in order to support said services.
-%Often, databases are leveraged on in order to store and provide an interface to access the service's data.
-%E.g., in an e-commerce application, databases may be used to store the stocks of products, shopping carts, customer information, etc.
-%It is expected for databases to provide an easy and quick access for data, while also managing how the data is stored and kept consistent.
-%
-%While many solutions for presenting data exist, two of the most common ones are key-value stores and relational databases.
-
-\paragraph{Key-value stores.}
-Most key-value stores present a simple interface with two basic operations - \emph{get} and \emph{put} \cite{dynamo, cops, cure, walter, pequod}.	%key-value stores
-The former allows users to obtain the state of an object, while the latter updates or stores an object.
-Each object is accessed by providing a key that uniquely identifies it.
-Some databases only provide opaque objects (i.e., registers), while others may provide richer interfaces by supporting objects such as counters, maps and sets, alongside appropriate operations on those, or other features such as transactions \cite{cure, walter, pequod}.	%DBs providing extra objects/ops
-PotionDB provides a key-value interface, with support for many different kinds of objects, operations, transactions and even for materialized views.
+Key–value stores provide a simple interface, typically with two main operations:
+\texttt{get} and \texttt{put}~\cite{decandia2007dynamo,occi2012causal,cure,walter,redis}.
+Objects are identified by keys and are often opaque values, although many systems
+support richer data types such as counters, sets or maps, and some offer
+transactions~\cite{cure,walter,redis}. PotionDB follows this model, but extends
+it with a wide range of CRDTs and transactional operations, including access to
+materialized views.
 
 \paragraph{Relational databases.}
-Relational databases provide a so-called relational model \cite{spanner, eiger, noria}.
-In relational databases, data is organized in tables, with possible relationships between tables and the columns of different tables.
-E.g., each entry in a table ``customers'' may refer to one or more entries in the table ``addresses''.
-Usually, columns represent the fields of a table, while each row represents one entry (data) in the table.
-Many systems provide SQL (\textbf{S}tructured \textbf{Q}uery \textbf{L}anguage) or a SQL-like language \cite{sequel, spanner, noria, mongoVScassandra} to define and access data, which allowing for a rich interface for handling data. %Fix this.
-For instance, with a SQL query, it is possible to obtain directly from the database the average of salaries of users in a given company.
-Conversely, in key-value stores, usually one would need to read multiple objects, calculate the average and then present the result, or store the pre-calculated result under some key (and then keep it up-to-date manually).
 
-Key-value stores have a simple interface \cite{dynamo}, often offering weak consistency and stressing on performance and fault tolerance \cite{dynamo, cops, cure}.
-Conversely, relational databases' richer interface eases application development \cite{spanner, noria, eiger}, but are tougher to design and optimize for, being mostly used by databases providing strong consistency.
-Some key-value stores provide extra features to facilitate application development by, e.g., providing many object types, extra operations or transactions \cite{cure, walter}.
+Relational databases organize data into tables with rows (tuples) and columns,
+and support relationships between tables~\cite{silberschatz2005database}.
+Structured Query Language (SQL) or SQL-like languages~\cite{sequel,spanner} are
+used to define schemas and query data. SQL offers a rich declarative interface
+that greatly simplifies application development. For example, a single SQL query
+can compute the average salary of employees in a given department, whereas a
+simple key–value store would require fetching multiple objects and computing the
+average in application code, or maintaining a separate pre-computed result.
 
-%Key-value stores are easy to use due to their simple interface \cite{dynamo}. 
-%Usually they offer weak forms of consistency, stressing on performance and fault tolerance \cite{dynamo, cops, cure}.
-%On the other hand, relational databases have a richer interface, which eases application development \cite{spanner, noria, eiger}, but are tougher to design and optimize for, being mostly used by databases providing strong consistency.
-%Some key-value stores provide extra features in order to facilitate application development by, e.g., providing many object types, extra operations, transactions \cite{cure, walter}.
+Key–value stores typically emphasize high performance and availability, often
+under weaker consistency models~\cite{decandia2007dynamo,occi2012causal,cure},
+while relational databases emphasize expressive queries and stronger
+consistency, at the cost of more complex implementations and potentially higher
+latency~\cite{silberschatz2005database,spanner}. Some systems attempt to bridge
+the gap by adding richer data types or limited transaction support to key–value
+stores~\cite{cure,walter}.
 
 \subsection{Queries}
-\label{subsec:queries}
 
-%Key-value stores typically offer simple interfaces, often gets and puts of data blobs. %Need a citation for this. Check some paper that claims this is not rich enough.
-%However, this makes application development more difficult, as relationships between objects and their correctness have to be maintained by the application logic.
-%This makes the relational model often provided by strong consistency systems interesting, as it eases application development.
+Applications access data in many ways. Some mostly perform simple lookups, such
+as fetching information about a specific product. Others require summaries,
+aggregations, sorting or more complex processing across large datasets.
 
-%One way to ease this is to provide a key-value store with a rich interface - e.g., by providing many kinds of different objects and different reads/update operations.
-%This still maintains the ease of development and high performance of key-value stores, while also easening application development.
-%To achieve this, it is important to consider which kind of operations are often used by applications.
-Applications access data in different ways.
-Some mostly access data directly, e.g., fetch information about a product in an e-commerce system.
-Others may require summaries, aggregations, sorting of data or even more complex processing.
+Online Analytical Processing (OLAP) refers to techniques for analyzing and
+organizing data using analytical queries~\cite{olap,olap2}. Such queries are
+commonly used for marketing, financial reporting, business intelligence and
+scientific analysis. In an e-commerce system, for example, it is important to
+track trending products to adjust supply, pricing or advertising. This is
+challenging: very large volumes of data must be analyzed (all relevant sales),
+the data is continuously updated, and results must be produced quickly enough to
+support timely decisions.
 
-%12. Try to reach 10?
+Common approaches to support analytical queries include materialized views,
+indexes, windowed computations and caches~\cite{olap,olap2,dbtoaster,analyticdb}.
+Operations such as joins, aggregations (sums, averages), sorting, limits and
+grouping are heavily used. Existing solutions often require expensive
+infrastructures, long-running queries, or accept stale or inconsistent data in
+order to keep costs acceptable~\cite{analyticdb,dbtoaster,sioulas2023real}.
 
-\textbf{O}n\textbf{l}ine \textbf{A}nalytical \textbf{P}rocessing, OLAP, is a method consisting on ways to analyse and organize data by executing analytical queries \cite{dbtoaster, viewSelection, optIncMaintenance, effMaintenance}, which are often used in the context of marketing, financial reports, business decisions and scientific data analysis. \todo{Is it clear to what is "which" refering to here? My intention: analytical queries}
-For instance, in an e-commerce system, it is useful to track the trending products in order to, e.g., adjust supply, prices or advertising.
-%For example, in an e-commerce system, it is useful to know the trending products at a given moment in order to, e.g., adjust supply, prices or advertisement.
-This is challenging as
-%This poses a challenge, as 
-very large volumes of data need to be analysed (all sales), with a constant stream of updates (new sales and products) and in a tight time frame (information must be quickly available to enable timely decisions).
-Common methods to provide analytical queries include views, indexes, windowed data and caches \cite{noria, dbtoaster, pequod, txcache, viewSelection, optIncMaintenance, effMaintenance}.
-%Views, indexes, windowed data and caches are some of the most common methods to provide these kind of queries \cite{noria, dbtoaster, pequod, txcache, viewSelection, optIncMaintenance, effMaintenance}.
-Operations such as table joins, sums/averages of data, sorts, limits, group by and others are often used by this kind of queries. 
-Current solutions face limitations, often requiring expensive infrastructures, slow query execution or having to accept staleness/coordination/inconsistencies \cite{noria, analyticdb, hadad, clickhouse, dbtoaster, slog}.
+The TPC-H benchmark~\cite{tpch,dbtoaster,analyticdb} exemplifies a sales-oriented
+database that supports complex queries for decision making. Its query workload
+captures many of the characteristics of real-world analytical workloads that we
+intend to support efficiently in PotionDB.
 
+\subsection{Speeding up queries: views and indexes}
 
-
-%\textbf{O}n\textbf{l}ine \textbf{A}nalytical \textbf{P}rocessing, OLAP, is a method which consists on ways to analyse and organize data by executing analytical queries \cite{dbtoaster, viewSelection, optIncMaintenance, effMaintenance}.
-%These kind of queries are often used in the context of marketing, financial report, business decisions and scientific data analysis.
-%For example, in an e-commerce system, it may be useful to know the most popular products at any given moment, in order to keep their stock available and e.g. adjust prices or advertisement.
-%This poses a challenge, as very large amounts of data need to be analysed (all sales), with updates often occurring (new sales, new products) and in short periods of time (information needs to be available fast to make a decision while it is still relevant).
-%Views, indexes, windowed data and caches are some of the most common methods to provide these kind of queries \cite{noria, dbtoaster, pequod, txcache, viewSelection, optIncMaintenance, effMaintenance}.
-%Operations such as table joins, sums/averages of data, sorts, limits, group by and others are used by this kind of queries. 
-
-The TPC-H benchmark \cite{tpch, dbtoaster, partView, lazyMaintenance} provides a specific example of a database managing sales data which aims to provide useful information for business decisions.
-TPC-H's queries are a good example of the kind of queries executed in analytical scenarios.
-Nowadays, a key requirement of analytical queries is to provide useful information with queries of quick execution, with constant updates happening in the background.
-
-%\todo{Maybe the paragraph below, or parts of it, should be in the research statement}
-%PotionDB is a geo-distributed database which aims to provide low latency for recurring queries.
-%Analytic queries fit such criteria (e.g., checking the most sold products is a recurring query).
-%We aim at providing such queries with a very low latency, similar to a normal query, while keeping the costs on storage low (partial + uniform replication).
-%As of now, PotionDB already supports many different kinds of CRDTs, providing solutions to answer queries often executed in OLAP scenarios.
-%Support for operations such as the ones referred before are already provided, and it is possible to support more if needed by adding new CRDTs to represent different kinds of objects or operations.
- 
-
-%Maybe end with a concluding note that later on more research can be done to find more types of applications/operations we may want to provide support for, or that PotionDB is extensible (e.g. - add more CRDTs)
-
-%I might have to look into "OLAP". Online Analytical Processing. So for stuff like data mining, report writting, business reporting for sales, marketing, management, etc.
-
-%Maybe I can start by looking into the SQL language. Then some papers providing strong consistency/SQL-like languages. There's one paper too providing weak consistency with relational model. Then also those papers of analytic queries/ChronoCache.
-
-%Can't find anything in the existing papers. Will have to search some other way. I did find at least a few systems supporting materialized views.
-
-\subsection{Speeding up queries - views and indexes}
-\label{subsec:views}
-
-In order to provide applications with simpler and quicker data access, several mechanisms have been studied to complement direct data access \cite{noria, dbtoaster, pequod, txcache, viewSelection, optIncMaintenance, effMaintenance, lazyMaintenance, lisa, bp-tree, bindex, dbproxy}, including indexes, views, data streaming, key-value stores as caches, etc.
-We describe here indexes and views, deferring caches and data streaming systems to Section \ref{subsec:existingSystems}.
-
-%pequod OK, 
-%genIndex, partIndex, effMaintenance
-%partIndex take out
-%genIndex take out.
-%others keep.
+To speed up data access and simplify application development, systems employ
+various mechanisms in addition to direct access, including indexes, views,
+materialized views, streaming operators and caches~\cite{silberschatz2005database,olap,dbtoaster,analyticdb}.
+Here we briefly review indexes and views.
 
 \paragraph{Indexes.}
-An index is a record whose goal is to speed up how quickly data is found \cite{bp-tree, mongoVScassandra, lisa}.
-In relational databases, an index can be made on a column of a table to provide quick access to data by some criteria other than the primary key.
-E.g., an index on users' data may provide quick access by phone number.
-It can also be used to help group data or sort more efficiently.
-In non-relational databases, indexes can be useful too - e.g., a map can store all users' keys, and each key can be used to directly 
-%access the data of a given user.
-access the respective user's data.
-In short, indexes are useful and commonly used to speed up queries and data access.
 
-%13
-%TODO: Check if some citations can be replaced with more recent citations from PotionDB paper (for both here and indexes)
+An index is an auxiliary data structure that accelerates access to records based
+on some key or predicate~\cite{silberschatz2005database,graefe2011modern}. In relational
+databases, indexes can be created on columns to support fast lookups, grouping or
+sorting by those columns. In non-relational systems, maps or other structures
+can play a similar role, mapping keys to object identifiers. Indexes are widely
+used in both OLTP and OLAP workloads to speed up queries.
 
-\paragraph{Views.}
-A view consists in a different way to present data.
-In the context of databases, it is defined as the result of some query \cite{txcache}. %Definition of a view.
-Views can be used to filter data (e.g., only show users above a certain age), or to accommodate subqueries that may be used by other queries (e.g., in a relational database, a join of two tables).
-As such, they are useful for application developers, providing data abstraction by letting users define relationships between tables.
-Views are re-calculated every time they are used, thus they do not use storage space but require processing time when queried.
-Materialized views, on the other hand, are used with the goal of speeding up queries \cite{noria, pequod, txcache, partView, viewSelection, incMaintenance, effMaintenance, lazyMaintenance}. %Definition and goals of materialized views, preferably also downsides.
-Materialized views cache the results of a given query, thus they can provide much quicker access to data \cite{parcur, hadad, marviq}, avoiding re-execution of certain queries all the time.
-However, it comes with its downsides - extra disk storage is needed and maintaining the views consistent and automatically updated is challenging \cite{oracleViews, dbsp, chronocache, birds, clickhouse}, thus few systems implement them.
-View maintenance is a common research topic \cite{noria, dbsp, oracleViews}.
+\paragraph{Views and materialized views.}
 
-%\todo{Not sure if the paragraph below should be here... or, at least, in this kind of form.}
-%PotionDB proposes to provide support for materialized views with incremental view maintenance.
-%Materialized views have the potential to speed up queries by multiple orders of magnitude \cite{partView, effMaintenance, lazyMaintenance}.
-%Given PotionDB's geo-distributed, partial replicated nature, the main aim with materialized views is to provide quick and efficient access to data that, without a view, could imply a long and complex query execution across many servers.
-%Another goal is to provide such views without requiring all the data referred by a view to be replicated everywhere, thus saving in storage and replication processing costs.
-%The views themselves should, however, be replicated everywhere relevant to provide low latency access to them.
-%This is thus a quite challenging and novel problem - to the best of our knowledge, PotionDB is the first system to propose providing materialized views in a geo-distributed, partially replicated, weakly consistent scenario.
-%The challenge comes from multiple aspects.
-%PotionDB's materialized views should have a low storage footprint compared to the data they refer.
-%Also, views may refer to data that is spread across many servers, without a single server having all the data required to compute the entire view.
-%Furthermore, it is essential for a view to be able to provide a reply to a query without executing complex computations or any communication (e.g., fetching data) with other servers.
-%Finally, our views must also be kept up-to-date and provide causal consistency.
-% \todo{Not sure if this part of ``without executing complex computations'' is clear.}
- 
- \subsection{Data safety}
- \label{subsec:invariants}
- \todo{Data safety or Invariants?}
- 
- %Before rewrite: 6+5+8 = 19
- %After: 7+4+11= 22 :(
- 
-Some applications require certain conditions to hold true at all times (i.e., invariants \cite{ipa, putting}) to function correctly 
- - e.g., in a banking app, that an account's balance is >= 0.
- Under strong consistency, this can be ensured by checking the balance before a withdrawal operation - however, this is burdensome and error-prone for developers, as real-world systems often have multiple invariants to keep.
- Moreover, with weak consistency, checking the condition is not enough due to concurrent operations: e.g., two concurrent withdraws of 10€ may succeed on a 15€ balance, %as each server's state shows enough balance available.
- as both withdraws see enough balance available.
- 
- As invariants are essential for application correctness, much research has been done towards detecting conflicting operations and automatically holding invariants \cite{putting, avoidence, pnuts, strongenough, finegrained, boundedconcurrency}, with a focus on reducing required coordination.
- However, most solutions still require coordination (i.e., strong consistency) for operations that can potentially conflict.
- 
- More recent research \cite{boundedCounter, antidotesql, ipa, no-op} attempts to bring invariants to weak consistency scenarios.
- Escrow techniques \cite{boundedCounter, escrow} enable sync-free execution until a certain limit at each replica, 
- %after which synchronization may be needed to reset the limit.
- albeit synchronization is required to reset the limit.
- This is suitable for numeric invariants and is supported by PotionDB through the Bounded Counter \cite{boundedCounter}. %TODO: Maybe not needed if I mention it later again.
- Antidote SQL and IPA \cite{antidotesql, ipa} propose two different approaches for upholding uniqueness, referential integrity and disjunction invariants.
- Very recently, Borrego et. al. \cite{no-op} propose the No-Op framework, leveraging on CRDTs to disable the effects of conflicting operations.
- It handles common kinds of invariants and is very expressive, but lacks scalability.
- Numerical and aggregation invariants are still challenging - IPA and No-Op struggle with them, being extremely restrictive on the concurrency allowed.
- Antidote SQL avoids this issue by using escrow techniques, however coordination is required in certain situations.
-%IPA and No-Op struggle with numerical and aggregation invariants, often being extremely restrictive on the concurrency allowed. 
-%Antidote SQL avoids this issue by using escrow techniques. 
- 
- %%%%%
- 
-% Some applications require certain conditions to hold true to ensure correct behaviour.
-% For example, in a banking application, we would want to prevent two withdraws of 10€ from executing on an account with 15€, as the resulting balance would be negative.
-% Under strong consistency, the application can prevent this by checking the balance before each withdraw operation.
-% However, this burdens developers and is error-prone, specially as in real-world systems, there are often many conditions to maintain.
-% 
-% To ease developer's burden, some systems support invariants \cite{putting} - conditions that must hold true at all times.
-% If an operation would violate an invariant, it is not executed.
-% Invariants are thus used to ensure application correctness - for instance, in our example, an invariant stating balance >= 0.
-% More invariants could be defined, e.g., that accounts have an associated customer, and said customer exists.
-% 
-%% To ease developer's burden, some systems support invariants.
-%% An invariant is a condition that must hold true at all times - if an operation would break the invariant, the operation would not be executed.
-%% Invariants are thus used to ensure application correctness - in the banking example, we would define an invariant stating balance >= 0.
-%% More invariants could be defined, e.g., that an account must have a customer associated to it and that customer must exist.
-%
-% However, by default keeping invariants requires strong consistency \cite{avoidence}, as concurrent operations can easily break invariants - e.g., two concurrent withdraws of 10€ will both see a 15€ balance, leading to the final balance of -5€.
-% Bringing invariants to weakly consistent systems is therefore desirable.
-% Some research already exists in this area, e.g., a Bounded Counter \cite{boundedCounter}
-%  for numeric variants, or invariant confluence \cite{putting, avoidence} analysis to determine which operations need coordination to maintain invariants.
-% However, bringing other kinds of invariants (e.g., unique, referential integrity) to weak consistency, specially without or with limited coordination, is still an open research direction.
- 
- %putting
- %putting consistency back into eventual consistency
- %avoidence
- %coordination avoidance in database systems
- 
- % - however, this is not possible under weak consistency, as the withdraws may be concurrent.
- 
- %Data correctness/invariants is mostly focused on strongly consistent systems
- %Important for critical systems, e.g., banking
- %Essential for the correct execution of many applications
- 
- %Invariants are conditions that must always hold true
- %They state important properties about the correctness of the system (e.g., balance > 0, all accounts have a client associated to it.)
- %Mostly strong-consistency
- %Mention bounded-counter and similar
+A view is a virtual table defined by a query over base tables~\cite{silberschatz2005database}.
+Views are often used for abstraction, security and reuse of complex subqueries.
+They are recomputed on demand when queried and do not, by themselves, improve
+performance.
+
+\emph{Materialized views} cache the results of a query, storing them physically
+to allow faster access~\cite{silberschatz2005database,dbtoaster,analyticdb}. They can greatly
+reduce the cost of recurring queries by avoiding repeated execution of expensive
+operations. However, they introduce challenges: extra storage is required, and
+views must be kept reasonably up-to-date and consistent with base data. Maintaining
+materialized views incrementally and efficiently is nontrivial, especially in
+the presence of frequent updates, distributed data and weak
+consistency~\cite{dbtoaster,dbsp,analyticdb}.
+
+View maintenance remains an active research area~\cite{dbtoaster,dbsp,analyticdb}.
+Systems such as DBToaster~\cite{dbtoaster} and DBSP~\cite{dbsp} explore different
+approaches to incremental maintenance and streaming semantics, but typically
+assume centralized or strongly consistent settings and full data availability,
+which limits their applicability to geo-replicated, partially replicated systems.
+
+\subsection{Data safety}
+\label{sec:data-safety}
+
+Many applications require certain conditions (invariants) to hold at all
+times. Examples include non-negative account balances in banking, capacity
+constraints in ticketing systems, or uniqueness of identifiers~\cite{bailis2014coordination,balter2015ipa}.
+Under strong consistency, invariants can often be enforced by checking
+conditions before performing updates, but this is burdensome and error-prone for
+developers, especially when many invariants interact.
+
+Under weak consistency, maintaining invariants is more challenging. Concurrent
+operations may each observe a state that appears valid locally but jointly
+violate the invariant. For instance, two concurrent withdrawals of 10 units from
+an account with balance 15 may both succeed, temporarily exposing a negative
+balance.
+
+A substantial body of work has studied how to detect conflicting operations and
+enforce invariants while minimizing coordination~\cite{bailis2014coordination,balter2015ipa,burckhardt2014principles,novakovic2013owntheconsistency,escrow,escrow2,no-op}.
+Traditional approaches often fall back to strong consistency for operations that
+might conflict. More recent work explores invariant-preserving techniques under
+weak consistency, such as escrow-based methods for numeric invariants~\cite{escrow,escrow2},
+invariant-preserving abstractions such as IPA and Antidote SQL~\cite{balter2015ipa,antidote-sql},
+and frameworks that disable or adjust conflicting operations (e.g., No-Op~\cite{no-op}).
+Numeric and aggregation invariants remain particularly challenging; some
+approaches rely on escrow, while others restrict concurrency significantly.
+
+PotionDB aims to provide invariant support in a weakly consistent, partially
+replicated setting by combining consistency levels with CRDT-based techniques.
+We revisit this topic in Chapter~\ref{cha:research_statement}.
 
 \subsection{Existing systems}
-\label{subsec:existingSystems}
+\label{sec:existing-systems}
 
-\todo{Suggestions for a better title? Also does this need some sort of introduction?}
+We now review a selection of systems that are particularly relevant to PotionDB,
+either because they target geo replication, support partial replication, provide
+weak consistency with transactions, or offer advanced support for analytical
+queries.
 
-%Spanner		% Strong consistency
-%MDCC			% Strong consistency, geo-distributed. Tries to do 1 round trip
-%SLOG			 % Strong consistency, geo-distributed. Tries to do low latency commits by making use of locality
-%Dynamo			% Weak consistency
-%COPS or Eiger	%Causal consistency. Maybe can describe only COPS, and mention on the authors later proposed Eiger with write transactions and a column-family model
-%Cure			%Causal consistency, and where PotionDB takes some inspiration from
-%Walter			%Strong consistency locally, weak consistency cross-datacenter
-%Noria			% Data-flow, materialized views
-%ChronoCache	%Geo-distributed cache
-%TxCache	%Cache with materialized views and transactional consistency
-%DBToaster	%Materialized views, OLAP queries, TPC-H
-%DBProxy %Maybe, I didn't refer to this one at all in the rest of the document.
+\paragraph{Spanner.}
 
-%Either on each one make a comment on their downsides, or try at the end to conclude on what can PotionDB do better/general limitations of each group of solutions
+Spanner~\cite{spanner} is Google’s globally distributed, strongly consistent
+database. It supports multi-version data, external (geo) replication and
+(partial) data placement. Spanner’s timestamps rely on Google’s TrueTime API,
+which combines GPS and atomic clocks to provide bounded clock uncertainty and
+enable lock-free snapshot reads. Replication is based on Paxos, and data is
+sharded across Paxos groups. Cross-shard transactions require two-phase commit,
+which increases latency and limits fault tolerance. Spanner’s reliance on tight
+clock synchronization and cross–data center coordination makes it challenging to
+use in scenarios requiring very low latency across distant regions.
 
-\paragraph{Spanner.} Spanner \cite{spanner} is a distributed, strongly consistent database proposed by Google for wide-area replication.
-The authors claim that data can be geo replicated while controversially claiming most applications only deploy data centers in a single continent.
-Data is multi-version and can be partially replicated, thus reducing replication costs.
+\paragraph{MDCC.}
 
-Spanner's timestamps are based on real clock time, enabling lock-free reads in the past.
-Spanner uses Google's TrueTime API, which provides real time clocks with bounded uncertainty by levering on GPS and atomic clocks.
-Reads across partitions may still need to halt (or do extra communication) due to having to wait for the uncertainty.
+MDCC~\cite{mdcc} is a geo-distributed, strongly consistent system that aims to
+commit transactions in a single wide-area RTT by combining several Paxos
+variants and exploiting operation commutativity. While single RTT commits are
+attractive, MDCC still requires at least one RTT for any transaction, and
+non-commutative updates may require multiple RTTs, which can be unacceptable for
+latency-sensitive applications. MDCC does not support partial replication.
 
-Spanner deploys Paxos for strongly consistent replication and shards data internally across Paxos groups.
-Cross shard transactions require 2-phase commit (2PC), limiting fault tolerance and, due to multiple round-trips (RTTs), results in high latency, forcing data centers to be kept close (e.g. same continent). 
-Furthermore, network partitions may halt the system.
-It is thus not suitable for geo-distributed applications requiring low latency.
+\paragraph{SLOG, Caerus and Detock.}
 
+SLOG~\cite{slog} is a strongly consistent geo-replicated system that leverages
+data locality: each item has a master data center, and transactions that access
+only items mastered in the same data center can commit without cross–data center
+coordination. This yields low latency when access patterns match master
+placement, but leads to high latency when clients are far from the masters or
+transactions span multiple masters.
 
-%\paragraph{Spanner.} Spanner \cite{spanner} is a distributed, strongly consistent database proposed by Google.
-%It is designed for wide-area replication: the authors claim that data can be globally replicated, but controversially they also claim most applications only deploy data centers in a single continent.
-%Data can be partially replicated, thus reducing replication costs.
-%Each data contains multiple versions, allowing for lock-free reads at a given version.
-%However, in case objects from different partitions are read in the same transaction, the system may need to wait until the clock advances enough, and extra communication may be needed to agree on a read clock.
-%
-%Paxos and 2-phase commit (2PC) are used to ensure strong consistency.
-%For each server group participating in Paxos, one server is chosen as leader to coordinate transactions.
-%If a transaction evolves data partitioned across more than one Paxos group, then 2PC is used.
-%
-%Spanner makes use of meaningful timestamps based on real clock time.
-%Spanner uses Google's TrueTime API, which provides real time with an announced uncertainty.
-%To keep uncertainty low, GPS and atomic clocks are used.
-%It is due to these real-time based clocks that Spanner provides lock-free reads in the past without locks or coordination.
-%
-%The usage of 2PC limits fault tolerance and latency.
-%Due to cross data center transactions, the data centers must be kept close (e.g. same continent) to keep latency bearable.
-%%Due to transactions across multiple data centers, the data centers cannot be too faraway as it would lead to high latency committing transactions.
-%However, this implies some clients will be faraway from the data centers and experience high latency, thus it may not be appropriate for some geo-distributed services.
-%Network partitions may halt the system due to not enough data centers being reachable for commit.
-%%The system may also come to an halt under a network partition, due to not enough data centers being reachable for commit.
+Caerus and Detock~\cite{caerus,detock} also aim for single-RTT cross–data center
+commits by relying on deterministic transactions and carefully chosen replication
+and commit protocols. They obtain impressive latencies in some scenarios, but
+sacrifice fault tolerance (e.g., limiting replication within a region) and
+assume that read/write sets of transactions are known in advance, which is not
+always realistic.
 
-%Note: Unlike PotionDB, MDCC does not provide atomic visibility.
-\paragraph{MDCC.} MDCC \cite{mdcc} is a geo-distributed strongly consistent system that aims to provide geo-distributed commits with a single RTT, unlike in the commonly deployed 2PC.
-Single RTT commits is desirable as RTTs between faraway data centers have high latency.
-%In geo-distributed scenarios, RTTs between faraway data centers have high latency, thus reducing RTTs is essential.
-For this goal, MDCC relies on concepts such as operation commutativity, having a master replica per object and combining multiple Paxos variants, namely Generalized, Multi and Fast Paxos.
-When the master is in a faraway data center, MDCC deploys ``fast quorums" to still achieve single RTT commit without involving the master, thus reducing latency.
-%Despite MDCC deploying a master replica for each object, MDCC still provides single RTT commits without involving the master by using ``fast quorums", helping in cases the master is in a faraway datacenter.
-%Despite MDCC relying on having a master replica for each object, MDCC still provides single RTT commits without involving the master by using ``fast quorums", helping in cases the master is in a faraway datacenter.
+\paragraph{Dynamo.}
 
-MDCC still has its shortcomings.
-It always requires at least one RTT, while some weak consistency systems execute operations locally.
-Furthermore, if two transactions do non-commutative writes to the same item (e.g., writes to a register), three RTTs are required for commit, which is unacceptable for many applications.
-Thus, MDCC is not appropriate for scenarios with popular items (e.g., social media, e-commerce).
-%Note: Does not support aborts, both from client and app server.
-%They take the slow path (3 RTTs, total, +2 from the base) when there are write conflicts.
-%Can also mention that MDCC does not provide atomic visiblity - only atomic durability.
+Dynamo~\cite{decandia2007dynamo} is Amazon’s eventually consistent key–value
+store. It uses a zero-hop DHT for partitioning and replicates each object on a
+configurable number of nodes. Reads and writes contact configurable quorums of
+replicas, allowing different performance and durability trade-offs. Dynamo
+returns conflicting versions to applications, leaving conflict resolution to
+developers. Its emphasis on availability and low latency has informed many
+subsequent systems, but the lack of structured conflict resolution and richer
+data types makes application development harder.
 
-%\paragraph{MDCC.} MDCC \cite{mdcc} is a geo-distributed strongly consistent system which aims to provide low latency by reducing the number of round trips for commits.
-%In geo-distributed scenarios, round trips between faraway datacenters have high latency.
-%Thus, MDCC focus on committing transactions with a single round trip, instead of using e.g. two round trips as in two-phase commit (2PC).
-%To achieve this, the authors rely on concepts such as operation commutativity and on combination of multiple Paxos variants, namely Multi-Paxos, Fast Paxos and Generalized Paxos.
-%Despite MDCC relying on having a master replica for each object, MDCC also provides single round trip commits even without evolving the master by using ``fast quorums'', which helps in case the master is in a faraway datacenter.
+\paragraph{COPS and Eiger.}
 
-%MDCC still has its shortcomings.
-%It needs at least one wide area round trip, while some weak consistency systems can execute operations locally.
-%Furthermore, under certain conflicts, a transaction executing under a single round trip may need to abort and trigger two extra round trips, thus having worse performance than 2PC.
-%Thus, MDCC is not appropriate in scenarios where write conflicts can happen frequently.
-%Can also mention that MDCC does not provide atomic visiblity - only atomic durability.
+COPS~\cite{cops} is a wide-area key–value store that provides causal+ consistency
+across data centers. Data is sharded within each data center, and causal
+dependencies between objects are tracked explicitly. COPS-GT extends COPS with
+read-only transactions. Achieving these guarantees requires nontrivial metadata
+and garbage-collection mechanisms; COPS-GT can suffer reduced throughput and
+unbounded metadata growth under partitions. Eiger~\cite{eiger} extends COPS with
+write and read–write transactions and richer datatypes, but neither system
+supports partial replication across data centers.
 
-\paragraph{SLOG.} SLOG \cite{slog} is a geo-distributed, strongly consistent system that aims to provide low latency and high throughput.
-SLOG proposes using data locality to reduce RTT duration.
-Each data item has a master replica;
-%All data in the system has a master replica; 
-writes and linearisable rads must be directed to it (snapshot reads can be at any replica).
-If all data accessed in a transaction is mastered in one data center, 
-%For transactions whose accessed data is all mastered in one data center, 
-SLOG commits without cross data center coordination, achieving low latency commit (assuming the client is also nearby).
-However, high latency is incurred if clients are faraway from the master - even if a nearby replica also holds the data -  or if a transaction spans masters in different data centers.
-%However, clients faraway from the master pay high latency even if the data is present in a nearby replica
-%Transactions spanning masters in more than one data center also pay high latency.
+\paragraph{Cure.}
 
-SLOG offers high throughput even under high contention,
-%Other noteworthy features include high throughput even under high contention on data access, 
-as well as automatic data remastering without considerable throughput impact.
-These properties come at a cost - clients cannot abort a transaction after submitting; transactions must be deterministic and must be fully known at the planning phase - i.e., dynamic transactions are not supported.
+Cure~\cite{cure} is a geo-replicated key–value store that provides highly
+available, causally consistent read–write transactions over CRDT-based data
+types. It employs optimizations to ensure non-blocking reads and monotonic
+snapshots even in the presence of failures. Cure offers a rich interface and
+automatic conflict resolution, but does not support partial replication or
+materialized views. PotionDB builds upon ideas from Cure, extending them with
+partial replication, non-uniform replication and advanced support for
+materialized views and analytical queries.
 
+\paragraph{Walter.}
 
-%9
-%6
+Walter~\cite{walter} is a geo-replicated key–value store that provides partial
+replication and PSI consistency. It introduces preferred sites, where writes to
+an object are more efficient, and counting sets (csets), which ensure that
+operations on certain sets commute. Walter demonstrates the benefits of partial
+replication and PSI, but does not focus on complex analytical workloads or
+materialized views.
 
-%\paragraph{SLOG.} SLOG \cite{slog} is a geo-distributed strongly consistent system which aims to provide low latency and high throughput.
-%They propose to make usage of data locality to provide low latency transactions.
-%All data in the system has a master replica.
-%Writes must always be directed at the master replica, and so do linearizable reads (they do support snapshot reads in other replicas).
-%However, if all the data a client wants to access is mastered in the same datacenter, and the client is close to it (data locality), then SLOG provides low latency as it commits without coordinating with other datacenters.
-%However, clients faraway from the master need to pay high latency even if the client is close to some replica of the object.
-%Transactions spanning masters in more than one datacenter must also pay high latency.
-%
-%Other noteworthy features include the provision of high throughput even under high contention on data access, as well as automatic data remastering without hindering throughput considerably.
-%However, these features, alongside with low latency transactions, come at a cost - transactions must be deterministic; after a client submits a transaction the client cannot abort the transaction; transactions must be fully known during the planning phase, i.e., it does not support dynamic transactions.
+\paragraph{Systems for materialized views and incremental maintenance.}
 
-
-%14
-%9
-
-\paragraph{Caerus.} Caerus is a strongly consistent, geo-distributed deterministic database able to commit geo-distributed transactions with a single RTT, by leveraging on transaction's determinism and read-write sets.% to globally order transactions.
-%It uses transaction's determinism and read-write sets to globally order transactions with a single RTT.
-Furthermore, Caerus relies on data locality and primary regions to reduce latency of single region transactions.
-Single RTT commits in all scenarios is ingenious, albeit it comes with important limitations. 
-First, a single RTT can still be too slow in geo-distributed scenarios.
-Furthermore, fault tolerance is severely limited - to achieve low latency for single region, the authors limited fault tolerance to a single region, which is unrealistic due to network partitions.
-Finally, pre-emptively knowing read-write sets of transactions is not always feasible.
-
-%\paragraph{Caerus.} Caerus is a strongly consistent, geo-distributed, deterministic database system that is able to commit geo-distributed transactions with a single RTT. 
-%It leverages on transaction determinism and knowing beforehand read+write sets of transactions in order to be able to globally order transactions with a single RTT. 
-%Furthermore, they rely on data locality and primary regions in order to reduce latency of single-region (or few-region) transactions. 
-%Usage of locality to considerably reduce transaction latency is noteworthy and further proves the relevance of partial replication in PotionDB. 
-%Furthermore, while strong consistency with a single RTT in all scenarios is ingenious, it comes with some important limitations - first, a single RTT can still be too slow for geo-distributed scenarios. 
-%Furthermore, fault tolerance is severely limited - in order to achieve low latency (6ms) for single-region, it was necessary to limit fault tolerance to a single region failure - which is unrealistic due to network partitions. 
-%Finally, knowing read-write sets of transactions is not an easy problem nor always achievable. PotionDB has no such requirements or limitations.
-%%(Note to self: not totally true @ PotionDB has no such requirements or limitations as our fault tolerance is… not good either. We can lose transactions due to not waiting.)
-
-%12
-%9
-
-\paragraph{Detock.} Similarly to Caerus, Detock proposes to use data locality and transaction determinism to provide strongly consistent, low latency single-region transactions and single RTT multi-region commits.
-Detock's transactional protocol also leverages on dependency graphs and deterministic deadlock resolution.
-%Detock also leverages on dependency graphs and deterministic deadlock resolution to achieve strong consistency with a single RTT.
-However, to keep latency low, replication is only synchronous within a region, so a whole region failure (or network partition) may render data unavailable.
-Their evaluation only considers single and two region transactions, which is unrealistic when worldwide or statistical queries are considered.
-Additionally, throughput (but not safeness) is influenced by clock skew.
-Finally, they do not support partial replication, leading to high replication costs.
-
-%\paragraph{Detock.} Similarly to SLOG, Detock proposes to use data locality and determinism to provide low latency single-region transactions. It shares similar weakness, limitations and strong points with SLOG. However, very importantly, they achieve single RTT cross-region transactions, considerably decreasing those transactions’ latency over SLOG and other solutions. They leverage on determinism, alongside dependency graphs and deterministic deadlock resolution to achieve strongly consistent transaction executions across data centers, without extra coordination. However, to keep latency low, Detock only replicates synchronously within a region, so a whole region failure (or network partition) may make data unavailable. Their evaluation only considers single and two region transactions, which is unrealistic when considering queries regarding global data or statistical data. Their performance is also affected by clock skew, and data is still asynchronously replicated everywhere, leading to high replication costs.
-
-\paragraph{Dynamo.} Dynamo \cite{dynamo} is a weakly consistent, highly available key-value store designed by Amazon.
-It provides eventual consistency with a simple get/put interface.
-Dynamo leverages on several features to achieve low latency and large scale resilience.
-Data is partitioned with a zero-hop DHT - every node knows how to reach all data items.
-Dynamo embraces hardware heterogeneity - powerful servers act as multiple nodes.
-Each object is replicated in N nodes, while reads/writes involve R/W replicas - these parameters are configurable for different performance and safety trade-offs.
-Dynamo detects write conflicts and keeps all conflicting versions, returning them on read for the application to merge.
-According to Amazon's practical experience, state divergence rarely happens.
-
-Dynamo applies a fully decentralized P2P structure, with gossip used for membership changes, failure detection and building the DHT.
-Dynamo focuses on 99.9\% latency, while ensuring resilience, high availability and data durability.
-However, eventual consistency, no automatic data merge or object abstractions makes it hard to develop for Dynamo.
-
-
-%\paragraph{Dynamo.} Dynamo \cite{dynamo} is a weakly consistent, highly available key-value store.
-%It provides eventual consistency with a simple get/put interface.
-%Dynamo leverages on multiple features in order to provide low latency and a resilient service at a large scale.
-%Data is partitioned across the nodes with a zero-hop DHT, with each node knowing the location of every data item.
-%Dynamo is also capable of leveraging on the different capacities of each server by using virtual nodes - more powerful servers represent multiple virtual nodes.
-%Each object is replicated in N virtual nodes, being said N configurable. Reads/writes must happen in, respectively, R/W replicas to be confirmed, being both parameters also configurable.
-%Write conflicts due to concurrent updates are handled by the application using Dynamo - Dynamo detects those conflicts, keeping multiple versions of the object and giving them to the application.
-%The application then merges the versions with its own logic when executing a read.
-%Practical experience suggests that version divergence is a rare occurrence.
-%
-%Dynamo is totally decentralized, applying a P2P structure.
-%Gossip is used to handle changes to the membership and failures, as well as building the zero-hop DHT.
-%Dynamo's structure allows it to provide low latency replies even at the 99.9\% percentile, while ensuring high availability and data durability.
-%However, providing only eventual consistency, having conflicts be merged by applications and no object abstractions increases the difficulty of developing applications that use Dynamo.
-
-
-\paragraph{COPS.} COPS \cite{cops} is a weakly consistent key-value store for the wide-area.
-COPS defines and provides causal+ consistency. 
-Data is sharded within each data center (but not across), and causal relationships are supported between objects in different shards.
-An extension, COPS-GT, provides read transactions for reading multiple objects in the same version.
-
-Operations in a datacenter are linearisable, and causally consistent across datacenters.
-As COPS require significant metadata (COPS-GT requires even more), the authors employ multiple garbage collection techniques.
-Providing read transactions comes at a cost - COPS-GT has reduced throughput compared to COPS in some scenarios, and COPS-GTs metadata may grow unbound under network partitions.
-The authors address the lack of write transactions, read+write transactions and richer datatypes in Eiger \cite{eiger}.
-However, neither COPS nor Eiger offer partial replication.
-
-%\paragraph{COPS.} COPS \cite{cops} is a weakly consistent key-value store for the wide-area.
-%COPS defines and provides causal+ consistency, with causal relationships possible even between objects in different servers (data can be partitioned inside a datacenter but not across datacenters).
-%Read transactions are also provided in one of COPS' versions (COPS-GT) in order to read multiple objects in the same version.
-%
-%Operations are linearizable inside a datacenter, and causally consistent across datacenters.
-%Extra metadata is stored in the database for the COPS-GT version, with multiple efforts for garbage collection in both COPS and COPS-GT.
-%However, providing read transactions comes at a cost - in some scenarios, COPS-GT has lower throughput compared to COPS.
-%Also, COPS-GT's metadata size may grow unbound under network partitions, has some garbage collection mechanisms can only happen when all datacenters can communicate with each other.
-%The lack of write transactions, read+write transactions and more rich objects are some shortcomings the authors address in Eiger \cite{eiger}.
-%Neither COPS nor Eiger offer support for partial replication across datacenters.
-
-\todo{Should I describe Cure in higher detail since PotionDB is based on Cure?}
-\paragraph{Cure.} Cure \cite{cure} is a geo-replicated key-value store providing causal consistency.
-Cure focus on being always available while still providing as many guarantees and ease of use as possible.
-Cure provides highly available, causally consistent read-write transactions, with multiple data types implemented as CRDTs, offering a rich interface and automatic conflict solving.
-Cure employs optimizations to ensure non-blocking reads and that consecutive snapshots represent newer states even under failures.
-However, in some scenarios, performance is reduced compared to other solutions, and clients may block when switching to a different data center due to a failure.
-It also does not support partial replication nor other useful utilities such as views.
-
-%Namely, it provides highly available, causally consistent transactions (both read, write and mixed), with clients reading a consistent snapshot.
-%It also provides CRDTs representing many different data types and with different, automated, ways of solving conflicts, unlike many other datastores only offering registers.
-%The combination of all these features is novel.
-
-%Cure presents some optimizations to ensure non-blocking reads, as well as ensuring consecutive snapshots are increasingly more recent even under failures.
-%However, under some scenarios performance is considerably lower than other solutions.
-%Clients may have to wait when doing failover datacenters.
-%It also does not support partial replication or other useful utilities such as views.
-
-\paragraph{Walter.} Walter \cite{walter} is a geo-replicated key-value store with partial replication and PSI (see Section \ref{subsec:weak}) consistency.
-PSI itself is also defined in \cite{walter}.
-Walter deploys two interesting features: preferred sites, where writes of an object are more efficient; and counting sets (csets), a set where all operations are commutative (similar to set CRDTs).
-Transactions in a given site can be fast committed without synchronization if all updated objects are either csets or preferred on said site - thus, applications with good data locality and relying on csets may have good performance with Walter.
-However, transactions updating objects with different preferred sites fall back to 2PC, requiring multiple RTTs and being partition-prone - i.e., the same limitations as in strongly consistent systems.
-\todo{Should I add here a comment pointing out how Walter basically shows how useful commutativity is for avoiding synchronization?}
-
-
-%
-%\paragraph{Walter.} Walter \cite{walter} is a geo-replicated key-value store with interesting semantics.
-%Walter supports partial replication and makes usage of two interesting features: preferred sites, where writes of an object are more efficient; counting sets (csets), a set where all operations are commutative (similar to a set CRDT).
-%Walter ensures no write-write conflicts are possible, thus not needing conflict resolution techniques.
-%Transactions in a given site can be fast commited, without synchronization with other sites, if all objects updated either are csets or are preferred on said site.
-%Thus with usage of data locality and csets, some applications may have good performance with Walter.
-%However, any transaction updating an object in another preferred site falls back to 2PC, which is slow in geo-distributed scenarios and may block under partitions.
-%Thus, if locality is not perfect, Walter suffers from similar downsides to strongly consistent systems.
-%The authors also define Parallel Snapshot Isolation (PSI), by being an extension of SI where different sites can commit concurrently as long as no write conflicts occur.
-
-%8+4+7=19
-
-%7+9 = 16
-%This may need to be further trimmed down.
-
-\paragraph{Noria.} Noria \cite{noria} is a streaming data-flow system for web applications that tolerate eventual consistency.
-Noria addresses limitations of both data-flow systems and databases, namely, windowed data for the former and materialized views for the latter.
-The main contribution is their partially-stateful data-flow model, allowing to only maintain partial operator state yet serve queries on all data.
-New entries are automatically added to the partial state while unused entries are evicted.
-Noria addresses how to efficiently provide queries and updates on such a system model.
-
-Noria provides incrementally maintained, partially materialized views.
-The authors claim it is feasible to provide materialized views for every query with Noria.
-Noria delivers impressive performance, but with some shortcomings.
-First, state eviction from partial state is random, which is sub-optimal.
-Parametrized range queries (e.g., day > 10) and multi-column joins are unsupported.
-Replication and geo-distribution are not addressed - both essential for many web services nowadays.
-The authors claim application development is easier compared to cache + database setup, due to not needing manual caching - however eventual consistency complicates application development.
-Finally, some cross-shard operations are inefficient.
-
-%\paragraph{Noria.} Noria \cite{noria} is a streaming data-flow system aimed for web applications which tolerate eventual consistency.
-%Noria focuses on addressing common problems of both data-flow systems and databases, namely, windowed data for the former and materialized views for the latter.
-%The main contribution is their partially-stateful data-flow model.
-%This model allows to serve queries on all data, yet only maintain partial state on the operators.
-%New entries are automatically added to the partial state, and unused entries evicted.
-%To further save on memory usage, an extensive re-use of operators is applied.
-%Noria addresses on how to efficiently provide queries and updates on such a system model.
-%
-%Noria provides partially materialized views, which are incrementally maintained.
-%The authors claim providing materialized views for every query is feasible with Noria. It is also claimed that application development is easier compared to a cache + database setup as there is no need for manual caching or ad-hoc tables to store intermediate results.
-%
-%Noria provides impressive performance, however it has its shortcomings.
-%State eviction from partial state is random, which is sub-optimal.
-%It does not support parametrized range queries (e.g., day > 10) nor multi-column joins; failures lead to inefficient recomputation of the data-flow.
-%Only eventual consistency is provided unlike in many other highly available databases, making application development harder.
-%Replication is also not addressed nor is geo-distribution, both essential to many web services nowadays.
-%Sharding is supported but some cross-shard operations are inefficient.
-
-%15 (5+5+5)
-%11 (7+4)
-
-\paragraph{Chronocache.} ChronoCache \cite{chronocache} is a mid-tier caching system for geo-distributed scenarios.
-It stores query results automatically and attempts to predict upcoming queries, executing them before they are issued by clients.
-Clients connect directly to ChronoCache instances deployed on nearby edge nodes, reducing client latency.
-ChronoCache does not use offline training, instead analysing clients' query patterns, building dependency graphs and analysing correlations.
-%Instead, it analyses clients' patterns, grouping queries in dependency graphs and analysing correlations between queries.
-ChronoCache detects queries executed consecutively, as well as in loops, predictively executing multiple queries when one is issued by a client.
-%being able to predictively execute multiple queries when one is issued by a client.
-
-ChronoCache speeds up applications with constant access patterns.
-However, ChronoCache is not suited for applications with considerable update ratios or less repetitive access patterns.
-It is still dependent on the underlying database, so network partitions may halt the system.
-
-%\paragraph{ChronoCache.} ChronoCache \cite{chronocache} is a mid-tier (between client and database) caching system for geo-distributed scenarios.
-%ChronoCache does not store only static data - it aims to store query results automatically and predict upcoming queries, executing them before they are issued by the client.
-%Thus, by having ChronoCache located close to the clients, query predicting can lead to savings in long round-trips.
-
-%ChronoCache does not use offline training.
-%Instead, it analyses clients' patterns, grouping queries in dependency graphs and analysing correlations between queries.
-%It also analyses odds of some queries being followed by others, as well as detecting queries issued in loops.
-%In the latter, ChronoCache can predictively execute the whole loop after the first query of the loop is issued by the client.
-%
-%ChronoCache can help speed up applications with constant access patterns.
-%However, applications with considerable update ratios or with less repetitive access patterns may not benefit from ChronoCache as much as, e.g., from a materialized view.
-%ChronoCache is also limited by the availability of the underlying database, thus network partitions may lead to a system halt.
-
-%12+8=20
-%6+8=14
-
-\paragraph{TxCache.} Traditional caching solutions provide only eventual consistency and no transaction semantics.
-TxCache, by contrast, provides strong consistency, supporting transactions with snapshot isolation and causality guarantees.
-TxCache provides a consistent, albeit likely stale, view of the database.
-Users can set a staleness limit, and it is easy to use as applications only need to mark functions as "cacheable".
-TxCache internally keeps a validity range for each cached result to indicate which snapshots can results be used on.
-
-TxCache has considerable limitations.
-First, it requires significant database modifications to support reads on specific versions and notify TxCache of data invalidity.
-Read-write transactions execute directly on the database to avoid anomalies, thus taking no benefit from caching.
-Also, only deterministic functions with no side effects and independent of external factors can be cached, missing possible records that could be safely cached.
-Required database modifications are non-trivial.
-Index or sequential scan queries lead to cacheable data that will be invalidated with any update to relevant tables, despite possible conditions on the queries allowing for smarter eviction strategies.
-
-%\paragraph{TxCache.} TxCache \cite{txcache} is a caching system focusing on providing strong consistency guarantees.
-%Many caching solutions provide only eventual consistency.
-%In contrast, TxCache provides snapshot isolation and causality guarantees.
-%This is achieved by keeping track of the versions of each database item.
-%Reads on TxCache are likely to be stale, but the user can set a staleness limit.
-%TxCache always ensures a consistent, even if stale, snapshot view of the database, easing application development compared to other caching solutions (e.g., memcached) that do not even provide transactions.
-%TxCache requires considerable modifications on the database in order to notify TxCache of data invalidity, as well as serve reads on a given version. Its API is, however, easy to use for applications, as applications only need to designate functions as "cacheable".
-%Internally, TxCache keeps a cache of query results with a validity range for each result - this allows to know in which snapshots can each result be used on for future queries.
-%
-%TxCache has some considerable limitations.
-%Read-write transactions execute directly on the database to avoid anomalies, thus take no benefit from caching.
-%Only functions with no side effects, deterministic and not dependent on external factors (e.g., system time) can be cacheable (TxCache does not check this requirement, leading to possible development bugs).
-%Required changes to the database may be difficult/lengthy, leading to potential bugs.
-%Index or sequential scan queries lead to cacheable data that will be invalidated with any update to relevant tables, despite possible conditions on the queries allowing for smarter eviction strategies.
-
-%10+4
-%7+4
-
-\paragraph{DBToaster.} DBToaster \cite{dbtoaster} is a database focused on managing large datasets with a constant update stream and long-running analytical queries.
-DBToaster provides materialized views with incremental view maintenance, which can be automatically generated and potentially split in parts for efficiency.
-By relying on delta-queries and view splitting, the authors define triggers which update most views in constant time per update, avoiding costly loops and table joins.
-Query re-writing rules are also provided alongside an heuristic optimizer to further optimize views and their maintenance.
-
-DBToaster shows that complex queries can be efficiently answered with materialized views and have affordable maintenance costs.
-However, some queries with nested aggregates still need to do a full view rebuild, and aggregates other than sum are not efficiently supported. % as well as efficient support of aggregates other than sums.
-Queries with inequality joins still need expensive joins to update the view.
-
-
-
-%\paragraph{DBToaster.} DBToaster \cite{dbtoaster} is a database focused on managing large datasets with a constant update stream.
-%Efficient support of analytical queries is desired, thus DBToaster focuses on long-running queries concerning large sets of data.
-%DBToaster provides materialized views with incremental view maintenance, making usage of delta queries to efficiently keep the views up-to-date.
-%Techniques are applied to automatically generate materialized views, potentially dividing a materialized view in many parts for efficiency.
-%By making usage of delta-queries and view splitting, they define triggers which update most views in constant time for each update, avoiding costly loops and table joins.
-%Query re-writing rules are also provided, alongside an heuristic optimizer that uses said rules to further optimize views and their maintenance.
-%
-%DBToaster shows that it is possible to answer complex queries with materialized views and have affordable maintenance costs.
-%However, some queries with nested aggregates still have to use full view rebuilding, as well as efficient support of aggregates other than sums.
-%Queries with inequality joins will still need joins to update the view.
-
-%Calvin (apparently an important/main reference for single RTT cross-DC transaction commit with strong consistency), Detock (if Detock, maybe replace over SLOG as there's similarities), Caerus (single RTT), 
-%Note: both SLOG and Detock are deterministic systems that assume knowing the whole transaction beforehand + need to know/derivate read/write set.
-
-%Maybe just Detock and Caerus, as I already have their descriptions? And then the system for incremental view maintenance.
-%Calvin maybe similar to Detock and Caerus as it is also deterministic system. So no need to refer as it is old (2012).
-
-%ChronoCache	%Geo-distributed cache
-%TxCache	%Cache with materialized views and transactional consistency
-%DBToaster	%Materialized views, OLAP queries, TPC-H
-%DBProxy %Maybe, I didn't refer to this one at all in the rest of the document.
-
-%DBSP notes:
-%- They provide a model for streams and incremental view maintenance. The idea is to stream snapshots of DB's state. It is assumed transactions are linearizable.
-%- Transactions also form a stream of changes (or deltas). A snapshot is a cumulation of transactions.
-%- They mention that bilinear operators (as e.g. joins) have a more complex implementation and require storing an amount of data proportional to the size of the relations: most TPC-H queries are based on joins, of many tables...
-%- They support recursive queries and computations with while loops.
-%- DBSP is expressive enough to support streaming window queries, queries on nested relations and non-monotone recursive queries.
-%- Their definition of incremental computation is meaningful only for streaming computations, unlike classical definitions which consider only one change.
-%- In section 3 they have some mathematical results that basically let them incrementalize a complex query into more simple steps.
-%- Most Relational Algebra operators are linear and thus have efficient incremental versions. Distinct is an exception (it's also complicated in PotionDB)
-%- Some of the mechanisms used for handling queries (e.g., aggregation) is similar to what is used in PotionDB. However, some group-by aggregates are not linear and thus only partially incremental - so still expensive.
-%- At the moment they have a low level library, which I'd argue is less convenient than our view specification.
-%- "We need creativity to find the right group structure"
-
-\paragraph{DBSP.} In DBSP \cite{dbsp}, the authors define a model for incremental view maintenance by streaming database snapshots.
-A snapshot is defined as a cumulation of transactions.
-DBSP is expressive enough to support streaming window queries, queries on nested relations and recursive queries.
-Some SQL operators are efficiently supported, however common queries patterns (as seen TPC-H benchmark \cite{tpch}) such as joins, distinct and aggregations with group by are costly in DBSP.
-Furthermore, DBSP requires transaction linearisability and all data to be available, which is challenging and limiting for geo-replicated scenarios.
+Several systems focus specifically on efficient maintenance of materialized
+views and streaming queries, such as DBToaster~\cite{dbtoaster}, DBSP~\cite{dbsp}
+and various analytical databases~\cite{analyticdb,clickhouse}. DBToaster
+generates incremental view-maintenance triggers that aim for (amortized)
+constant-time updates per base update. DBSP provides a general model for
+incremental maintenance over streams of database snapshots. These systems show
+that complex queries can be maintained efficiently, but typically assume
+centralized or strongly consistent settings and full data availability, which
+limits their applicability in geo-replicated, partially replicated scenarios.
 
 \subsection{Data access in PotionDB}
 
-PotionDB adopts a key-value interface, but vastly extends it by supporting multiple rich CRDTs.
-PotionDB exposes to the clients multiple read and update operations appropriate for each CRDT type, including read operations of partial state (e.g., lookup(e) in a set).
-Furthermore, PotionDB provides highly available, causally consistent transactions. \todo{Should I mention here again PotionDB's consistency guarantees (PSI+cset)? I already mentioned this before at the end of Section 2.2. The motivation to mention it here again is to put it in comparison with the systems just mentioned before.}
+PotionDB adopts a key–value interface extended with rich CRDT-based data types.
+It exposes multiple read and update operations tailored to each CRDT, including
+operations that access partial state (e.g., membership queries on sets).
 
-PotionDB focuses on supporting recurrent queries with very low latency, akin to reads on basic objects.
-Analytical and OLAP queries fit PotionDB's use case, as they are often recurring (e.g., checking the most sold products), benefit from low latency (e.g. to enable timely business decisions) and should ideally have negligible impact on the throughput and latency of other queries and updates.
-We propose to support this with materialized views that are automatically and incrementally maintained, even if the data referred by a view is partitioned across different data centers.
-We detail our solution in the next chapter.
+On top of this, PotionDB provides highly available, causally consistent
+transactions with PSI+cset semantics, as discussed in
+Section~\ref{sec:weak-consistency}. This combination allows developers to
+perform transactional updates over partially replicated CRDTs while benefiting
+from weak-consistency performance and availability.
 
-%OLAP, focus on recurring queries with low latency + analytic queries.
-%Materialized views.
-%Should I do any comparison with the existing systems? I could say something like we provide consistency similar to Cure, but with partial replication support, views and improved view maintenance compared to DBSP. But I think better not say something like that.
-
-
-%\section{Thoughts}
-%
-%So here it is basically a very extended state of the art (similar to how I did in my master's? A bit smaller though)
-%Which topics do I want to touch about here?
-%\begin{itemize}
-%	\item CAP
-%	\item Consistency levels (probably a lot to cover here - from weak to strong, multiple types of weak, causality between objects/same object, etc.)
-%	\item CRDTs
-%	\item Antidote.
-%	\item Partial replication
-%	\item Non-Uniform replication
-%	\item Geo replication
-%	\item State partition???
-%	\item Views/indexes. Namely materialized views.
-%	\item Maybe typical database queries/operations (limit, sort by, etc.)? Has some relevance as we aim to provide views with CRDTs.
-%	\item Other similar solutions (ChronoCache, etc. Check the paper). Must definitely mention things like Noria and predictive treaties.
-%\end{itemize}
-%
-%What about subsections?
-%\begin{itemize}
-%	\item Replication
-%	\item Consistency (can probably include CAP and state partition?)
-%	\item Other solutions?
-%\end{itemize}
-%
-%For consistency, I can check Albert's PHD plan for references. Same for conflict resolution techniques in CRDTs.
-%Check our paper and my master's thesis for more topics/references too.
-%
-%Note: On research statement, I can talk about TPC-H, and even give an example on how to transform a TPC-H query into CRDTs.
-%%\chapter{NOVAthesis Template \emph{User's Manual}}
-%%\label{cha:users_manual}
-%
-%This phrase from the grant documents can be useful:
-%''In this work we propose to design a novel replication model levering on the advantages of both partial and non-uniform replication. We will also conduct research on integrating multiple consistency models in our proposal, which is challenging due to transactions spanning multiple partitions and materialized views referring to multiple partitions. We will also implement our model in a database prototype.´´
-%
-%To talk about how difficult/novel the problem is, mention that: - we combine partial + uniform replication (novel) in a geo-distributed scenario + has to handle consistency for transactions spanning multiple partitions, ensuring both partially replicated objects and materialized views stay updated and correct.
-%
-%Check the FCT grant docs for objectives/contributions too (dynamic partition (add/remove replicas on the fly), stronger consistency models are particularly interesting to mention.)
-%
-%May be worth mentioning my Master's work (and the published paper) - if needed, I have the knowledge and experience to design new CRDTs, and also understanding of consistency levels.
+A central goal of PotionDB is to support recurring analytical queries with
+latencies comparable to simple reads on base objects. Analytical and OLAP-style
+queries are typically recurring (e.g., “top 10 most sold products”), benefit
+from low latency to enable timely decisions, and should not significantly degrade
+the throughput or latency of other operations. PotionDB addresses this by
+supporting materialized views that are automatically and incrementally
+maintained, even when the underlying data is partitioned across multiple data
+centers. These mechanisms are presented in detail in
+Chapter~\ref{cha:research_statement}.
