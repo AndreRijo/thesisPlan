@@ -24,7 +24,7 @@ choices we adopt in PotionDB.
 
 In an ideal world, distributed systems would provide strongly consistent data, be
 always available, and keep operating correctly even in the presence of failures and
-network partitions. In practice, this is not possible. The CAP theorem~\cite{gilbert2002brewer}
+network partitions. In practice, this is not possible. The CAP theorem~\cite{cap}
 states that in the presence of network partitions, a distributed system can provide
 at most two of the following properties:
 
@@ -61,7 +61,7 @@ while avoiding the coordination costs associated with strong consistency.
 \label{sec:consistency}
 
 A wide range of consistency models has been proposed in the literature
-(e.g.,~\cite{bernstein1987concurrency,herlihy1990linearizability,spanner,bailis2013eventually,occi2012causal,decandia2007dynamo,terry1994session}).
+(e.g.,~\cite{bernstein1987concurrency,linearizability,spanner,bailis2013eventually,occic2012causal,dynamo,session}).
 Each model offers different guarantees on which states can be observed by clients,
 and imposes different implementation costs and deployment restrictions. Despite
 this variety, most models can be broadly classified as providing either some form
@@ -73,10 +73,10 @@ of \emph{strong} consistency or some form of \emph{weak} consistency.
 Under strong consistency, all clients observe the same state of the system
 independently of which replica they contact. Achieving this generally requires a
 total order on write operations, enforced via coordination among replicas
-(e.g., consensus protocols or total order broadcast)~\cite{bernstein1987concurrency,herlihy1990linearizability,spanner,lamport2001paxos,corbett2013spanner}.
+(e.g., consensus protocols or total order broadcast)~\cite{bernstein1987concurrency,linearizability,spanner,paxos,spanner}.
 Depending on the system design, even read operations may need to contact a
 majority of replicas or a designated master replica to ensure they observe the
-latest committed state~\cite{spanner,berenson1995critique}.
+latest committed state~\cite{spanner,si}.
 
 These coordination requirements imply that strongly consistent systems must
 compromise on availability in the presence of failures or partitions: to prevent
@@ -84,30 +84,30 @@ divergence or incorrect results, operations may have to block or be rejected whe
 enough replicas cannot be reached~\cite{bailis2013hatrack,bailis2013eventually}.
 Moreover, in geo-distributed settings, the cost of coordination across distant
 data centers can be prohibitively high; round-trip times quickly dominate
-operation latency~\cite{corbett2013spanner,bailis2013eventually,tilley2013cloud}
+operation latency~\cite{spanner,bailis2013eventually,tilley2013cloud}
 and can limit throughput under contention~\cite{bailis2013hatrack}.
 
 On the positive side, strong consistency makes it easier to develop correct
 applications: programmers can reason about a single, globally ordered sequence of
 operations and are not exposed to many of the anomalies that appear under weaker
-models~\cite{adya1999weak,bailis2014coordination}. Classical strong models include
-serializability, linearizability and snapshot isolation~\cite{bernstein1987concurrency,herlihy1990linearizability,berenson1995critique}.
+models~\cite{adya1999weak,avoidence}. Classical strong models include
+serializability, linearizability and snapshot isolation~\cite{bernstein1987concurrency,linearizability,si}.
 Recent work on strongly consistent systems has focused on reducing the number of
 cross-replica round trips, exploiting data locality, and using batching and
-pipelining to reduce commit latency and improve throughput~\cite{spanner, corbett2013spanner,mu2014,wolf2016calvin}.
+pipelining to reduce commit latency and improve throughput~\cite{spanner, spanner,mu2014,wolf2016calvin}.
 
 \subsection{Weak consistency}
 \label{sec:weak-consistency}
 
 Weak consistency models relax the requirements of strong consistency in exchange
-for better availability, lower latency and higher scalability~\cite{bailis2013eventually,terry1994session,decandia2007dynamo,occic2012causal}.
+for better availability, lower latency and higher scalability~\cite{bailis2013eventually,session,dynamo,occic2012causal}.
 They allow replicas to diverge temporarily and may expose anomalies such as stale
 reads, non-monotonic observations, or surprising re-orderings of operations.
 Reasoning about application correctness becomes more challenging, since
 concurrent updates to the same objects may lead to unintuitive results, and
 clients may observe inconsistent intermediate states~\cite{adya1999weak,bailis2013eventually}.
 
-A minimal and widely deployed model is \emph{eventual consistency}~\cite{bailis2013eventually,decandia2007dynamo}.
+A minimal and widely deployed model is \emph{eventual consistency}~\cite{bailis2013eventually,dynamo}.
 It guarantees only that if updates stop, replicas will eventually converge to a
 common state, but does not constrain which intermediate states can be observed
 or how conflicts are resolved. This raises many questions: how are concurrent
@@ -115,12 +115,12 @@ updates to the same object handled; which values can a read return; and how does
 state evolve while updates are being propagated?
 
 To provide more structure, several stronger but still weak models have been
-studied~\cite{bailis2013eventually,occi2012causal,terry1994session,adya1999weak,zawirski2015eventual,lamport1978time}.
+studied~\cite{bailis2013eventually,occic2012causal,session,adya1999weak,swiftcloud,lamport2019time}.
 Among them, \emph{causal consistency} is particularly attractive. It guarantees
 that operations that are causally related (in the sense of Lamport’s happened-before
-relation~\cite{lamport1978time}) are seen in a compatible order by all clients:
+relation~\cite{lamport2019time}) are seen in a compatible order by all clients:
 for example, a read that happens after a write must reflect the effects of that
-write~\cite{occi2012causal,bailis2013eventually}. This avoids anomalies such as
+write~\cite{occic2012causal,bailis2013eventually}. This avoids anomalies such as
 seeing a reply to a message before seeing the message itself in a group
 communication system.
 
@@ -134,16 +134,16 @@ notification before the product is actually available.
 
 Causal+ consistency extends causal consistency by guaranteeing that replicas
 eventually converge by resolving conflicts deterministically in all replicas~\cite{occic2012causal,bailis2013eventually}.
-Other useful weak models include monotonic reads~\cite{terry1994session}, which
+Other useful weak models include monotonic reads~\cite{session}, which
 ensure that consecutive reads of the same object never move backwards in time,
 and snapshot-based models such as snapshot isolation (SI) and its variants,
 which provide a consistent snapshot per transaction but still allow certain
-anomalies~\cite{berenson1995critique,yu2000practical}.
+anomalies~\cite{si,yu2000practical}.
 
 Snapshot Isolation (SI) offers each transaction a consistent snapshot of the
 database: reads never block and always see a self-consistent state, and write
 conflicts are detected at commit time, requiring coordination and a total order
-on committing transactions~\cite{berenson1995critique}. Parallel Snapshot Isolation
+on committing transactions~\cite{si}. Parallel Snapshot Isolation
 (PSI) relaxes this by allowing transactions in different replicas to commit in
 different orders~\cite{walter}. PSI is attractive for geo-distributed systems, as it
 can provide strong guarantees for transactions that access a single replica,
@@ -182,28 +182,28 @@ and replica identifiers, or conflicting versions can be handed to the
 application for resolution. A more scalable and developer-friendly approach is
 to design the data types themselves so that all relevant operations commute.
 
-PotionDB adopts CRDTs (Conflict-free Replicated Data Types)~\cite{shapiro2011conflictfree}
+PotionDB adopts CRDTs (Conflict-free Replicated Data Types)~\cite{crdt}
 for its core data types. CRDTs are designed for large-scale, weakly consistent
 systems: they guarantee that, when all updates have been delivered, all replicas
 will converge to the same state, even under arbitrary re-orderings and
 duplications of messages. Updates and reads can be served locally without
 synchronization, enabling high availability and low latency; updates are
-propagated asynchronously in the background~\cite{shapiro2011conflictfree,baquero2017state,crdt-caching}.
+propagated asynchronously in the background~\cite{crdt,stateCRDT,crdt-caching}.
 
 CRDTs come in two main flavours: state-based and operation-based. In state-based
 CRDTs, replicas periodically ship their state (or deltas) and merge states using
 a join operation on a monotonic semi-lattice; in operation-based CRDTs, replicas
 propagate the effect of operations and rely on commutativity and appropriate
-delivery guarantees~\cite{shapiro2011conflictfree,baquero2017state}. Multiple
+delivery guarantees~\cite{crdt,stateCRDT}. Multiple
 policies can be supported for the same abstract type (e.g., different semantics
-for sets), increasing flexibility~\cite{shapiro2011conflictfree}.
+for sets), increasing flexibility~\cite{crdt}.
 
 Other commutativity-based approaches exist. RADTs (Replicated Abstract Data
 Types)~\cite{preguicarpadt} share similarities with CRDTs but offer fewer
-conflict-resolution policies. Operational Transformation (OT)~\cite{ellis1989concurrency,sun1998operational}
+conflict-resolution policies. Operational Transformation (OT)~\cite{ot,otCorrectness}
 transforms operations upon delivery so that they commute, but designing correct
 transformations is often more complex and error-prone than designing CRDT
-operations to be commutative from the outset~\cite{shapiro2011conflictfree}. We
+operations to be commutative from the outset~\cite{crdt}. We
 therefore base PotionDB on CRDTs, leveraging their well-understood semantics and
 rich toolbox of existing designs.
 
@@ -212,7 +212,7 @@ rich toolbox of existing designs.
 
 Replication is central to distributed systems: it improves availability, fault
 tolerance and latency, but also increases storage, network and processing
-costs~\cite{abbadi1990faulttolerant,decandia2007dynamo}. The choice of replication
+costs~\cite{abbadi1990faulttolerant,dynamo}. The choice of replication
 strategy must take into account the consistency model, failure assumptions,
 access patterns, and deployment (e.g., within a single data center or across
 continents). In PotionDB we combine several replication concepts to obtain a
@@ -225,16 +225,16 @@ has been replicated to and acknowledged by a subset of replicas (often a
 majority)~\cite{tanenbaum2006distributed}. This is common in strongly consistent
 systems, which rely on protocols such as Paxos or state-machine replication to
 totally order operations and ensure that replicas remain up-to-date and do not
-diverge~\cite{lamport2001paxos,schneider1990implementing,spanner}. While this
+diverge~\cite{paxos,schneider1990implementing,spanner}. While this
 provides strong guarantees, it increases operation latency—especially when
 replicas are far apart—and limits availability, since operations may block or
-fail if enough replicas cannot be contacted~\cite{corbett2013spanner,bailis2013eventually}.
+fail if enough replicas cannot be contacted~\cite{spanner,bailis2013eventually}.
 
 In \emph{asynchronous} replication, an update may be confirmed locally before it
 is propagated to other replicas~\cite{tanenbaum2006distributed}. This is a natural
 fit for weakly consistent systems, allowing operations to complete with low
 latency and enabling higher throughput. Replication can be performed in the
-background, possibly batching multiple updates for efficiency~\cite{decandia2007dynamo,occi2012causal}.
+background, possibly batching multiple updates for efficiency~\cite{dynamo,occic2012causal}.
 The downside is that replicas can diverge and conflicts must be handled, as
 discussed previously.
 
@@ -245,7 +245,7 @@ the critical path is essential for low latency and high availability.
 \subsection{Operation- and state-based replication}
 
 An important design choice is how to propagate changes to replicas. Two broad
-approaches are commonly distinguished~\cite{shapiro2011conflictfree}:
+approaches are commonly distinguished~\cite{crdt}:
 
 \begin{description}
   \item[State-based replication.] Replicas periodically send their entire state,
@@ -264,16 +264,17 @@ lead to many small messages when updates are frequent, whereas state-based
 replication may be too expensive for large objects, as even small changes require
 sending large states. Optimizations exist in both cases: operations can be
 batched, and state-based approaches can send only deltas between states, as in
-delta-CRDTs~\cite{baquero2017state,gomes2017delta}.
+delta-CRDTs~\cite{stateCRDT,deltaAlmeida}.
 
 PotionDB uses operation-based replication for its CRDT objects, which fits well
 with asynchronous, causally ordered communication and allows us to exploit the
 commutativity of CRDT updates.
 
 \subsection{Partial replication}
+\label{subsec:partial}
 
 Many distributed storage systems employ full replication: every data center
-replicates the entire dataset~\cite{decandia2007dynamo,cure}. This simplifies
+replicates the entire dataset~\cite{dynamo,cure}. This simplifies
 system design and can provide high fault tolerance and low read latency, but it
 does not scale well as the number of data centers grows. Storage, network and
 processing costs increase linearly with the number of replicas, since every
@@ -285,7 +286,7 @@ Two complementary mechanisms are used to mitigate these costs:
   \item \emph{Internal partitioning (sharding)} divides the dataset across
         shards within a data center, allowing the system to exploit multi-core
         hardware and multiple servers and to scale to datasets that no longer
-        fit in a single machine~\cite{decandia2007dynamo,bailis2013eventually}.
+        fit in a single machine~\cite{dynamo,bailis2013eventually}.
   \item \emph{External partitioning (partial replication)} assigns different
         subsets of the dataset to different data centers. Each data center
         stores only a fraction of the objects, often chosen based on data
@@ -318,26 +319,26 @@ Large-scale Internet services often serve users worldwide and therefore deploy
 data centers across multiple continents. We refer to systems that replicate data
 across distant data centers as \emph{geo-replicated}. Geo replication is
 challenging due to high and variable latencies and limited bandwidth between
-data centers~\cite{corbett2013spanner,bailis2013eventually}. Combining strong
+data centers~\cite{spanner,bailis2013eventually}. Combining strong
 consistency with high availability in such environments is particularly
 difficult, as already discussed in Section~\ref{sec:cap}.
 
 In wide-area replication within a single region (e.g., across data centers in
 the same country), cross–data center coordination may still be acceptable, and
-several systems exploit this~\cite{spanner,occi2012causal}. In truly
+several systems exploit this~\cite{spanner,occic2012causal}. In truly
 geo-distributed deployments, however, round-trip times can easily reach hundreds
 of milliseconds. Systems that rely on multiple cross–data center RTTs per
 operation often incur latencies that are intolerable for interactive
-applications~\cite{bailis2013eventually,corbett2013spanner}.
+applications~\cite{bailis2013eventually,spanner}.
 
 Some systems provide strong consistency in geo-replicated settings, but at the
 cost of high latency, limited availability and often reduced
 throughput~\cite{spanner,mdcc,slog,detock}. Other designs offer strong
 consistency within a data center but weaker guarantees across data
-centers~\cite{occi2012causal,cops,eiger}. Weakly consistent systems that provide
+centers~\cite{occic2012causal,cops,eiger}. Weakly consistent systems that provide
 eventual or causal consistency are generally better suited for geo replication,
 but they shift some of the burden of dealing with anomalies to application
-developers~\cite{decandia2007dynamo,occi2012causal,bailis2013eventually}.
+developers~\cite{dynamo,occic2012causal,bailis2013eventually}.
 
 PotionDB is designed from the outset for geo replication under weak consistency.
 It uses asynchronous, operation-based replication, partial replication and
@@ -345,6 +346,7 @@ CRDTs to avoid placing geo-distributed coordination on the critical path of most
 operations.
 
 \subsection{Non-uniform replication}
+\label{subsec:nonuniform}
 
 Partial replication reduces costs by storing fewer replicas of each object, but
 does not address the case of large or highly updated objects. In many
@@ -354,16 +356,16 @@ e-commerce system may receive updates for hundreds of thousands of products, but
 only the very top entries matter for reads; the vast majority of updates do not
 change the visible state.
 
-\emph{Non-uniform replication}~\cite{cabrita2017nonuniform} exploits this by
+\emph{Non-uniform replication}~\cite{nonUniform} exploits this by
 replicating only the part of the state that affects the visible behaviour of an
 object. Updates that may become relevant in the future are stored locally and
 maybe partially replicated for fault tolerance, while updates that will never
 affect the visible state can be discarded. This reduces storage, network and
 processing overheads for large objects while preserving read correctness.
 
-Cabrita et al.~\cite{cabrita2017nonuniform,cabrita2018scalable} propose several
+Cabrita et al.~\cite{nonUniform,nonUniformThesis} propose several
 non-uniform CRDTs, including Top-K and Top-Sum leaderboards, histograms and
-filtered sets. A related notion is \emph{computational CRDTs}~\cite{computational-crdts},
+filtered sets. A related notion is \emph{computational CRDTs}~\cite{computationalCrdt},
 in which applications are interested only in the result of a computation over the
 state (e.g., an average) rather than in the full state itself. These CRDTs keep
 only the minimal information required to compute the desired result, further
@@ -399,7 +401,7 @@ can be understood as variants or combinations of these.
 \paragraph{Key–value stores.}
 
 Key–value stores provide a simple interface, typically with two main operations:
-\texttt{get} and \texttt{put}~\cite{decandia2007dynamo,occi2012causal,cure,walter,redis}.
+\texttt{get} and \texttt{put}~\cite{dynamo,occic2012causal,cure,walter,redis}.
 Objects are identified by keys and are often opaque values, although many systems
 support richer data types such as counters, sets or maps, and some offer
 transactions~\cite{cure,walter,redis}. PotionDB follows this model, but extends
@@ -418,7 +420,7 @@ simple key–value store would require fetching multiple objects and computing t
 average in application code, or maintaining a separate pre-computed result.
 
 Key–value stores typically emphasize high performance and availability, often
-under weaker consistency models~\cite{decandia2007dynamo,occi2012causal,cure},
+under weaker consistency models~\cite{dynamo,occic2012causal,cure},
 while relational databases emphasize expressive queries and stronger
 consistency, at the cost of more complex implementations and potentially higher
 latency~\cite{silberschatz2005database,spanner}. Some systems attempt to bridge
@@ -495,7 +497,7 @@ which limits their applicability to geo-replicated, partially replicated systems
 
 Many applications require certain conditions (invariants) to hold at all
 times. Examples include non-negative account balances in banking, capacity
-constraints in ticketing systems, or uniqueness of identifiers~\cite{bailis2014coordination,balter2015ipa}.
+constraints in ticketing systems, or uniqueness of identifiers~\cite{avoidence,ipa}.
 Under strong consistency, invariants can often be enforced by checking
 conditions before performing updates, but this is burdensome and error-prone for
 developers, especially when many invariants interact.
@@ -507,11 +509,11 @@ an account with balance 15 may both succeed, temporarily exposing a negative
 balance.
 
 A substantial body of work has studied how to detect conflicting operations and
-enforce invariants while minimizing coordination~\cite{bailis2014coordination,balter2015ipa,burckhardt2014principles,novakovic2013owntheconsistency,escrow,escrow2,no-op}.
+enforce invariants while minimizing coordination~\cite{avoidence,ipa,burckhardt2014principles,novakovic2013owntheconsistency,escrow,escrow2,no-op}.
 Traditional approaches often fall back to strong consistency for operations that
 might conflict. More recent work explores invariant-preserving techniques under
 weak consistency, such as escrow-based methods for numeric invariants~\cite{escrow,escrow2},
-invariant-preserving abstractions such as IPA and Antidote SQL~\cite{balter2015ipa,antidote-sql},
+invariant-preserving abstractions such as IPA and Antidote SQL~\cite{ipa,antidotesql},
 and frameworks that disable or adjust conflicting operations (e.g., No-Op~\cite{no-op}).
 Numeric and aggregation invariants remain particularly challenging; some
 approaches rely on escrow, while others restrict concurrency significantly.
@@ -567,7 +569,7 @@ always realistic.
 
 \paragraph{Dynamo.}
 
-Dynamo~\cite{decandia2007dynamo} is Amazon’s eventually consistent key–value
+Dynamo~\cite{dynamo} is Amazon’s eventually consistent key–value
 store. It uses a zero-hop DHT for partitioning and replicates each object on a
 configurable number of nodes. Reads and writes contact configurable quorums of
 replicas, allowing different performance and durability trade-offs. Dynamo

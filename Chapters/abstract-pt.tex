@@ -3,41 +3,55 @@
 %% abstrac-pt.tex
 %% NOVA thesis document file
 %%
-%% Abstract in Portuguese
+%% Resumo em Português
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \typeout{NT FILE abstrac-pt.tex}%
 
-Independentemente da língua em que a dissertação esteja redigida, é necessário um resumo na mesma língua do texto principal e outro resumo noutra língua. Pressupõe-se que as duas línguas em questão sejam o português e o inglês.
+Os serviços \emph{online} modernos servem centenas de milhões de
+utilizadores a partir de centros de dados distribuídos por todo o mundo,
+tendo de conciliar três requisitos em tensão: baixa latência, elevada
+disponibilidade e consistência dos dados. À medida que o número de centros
+de dados aumenta, replicar todos os objetos em todos os centros torna-se
+proibitivo em termos de custos de armazenamento, rede e processamento. A
+\emph{replicação parcial}, em que cada centro de dados replica apenas um
+subconjunto dos dados, é uma forma natural de conter estes custos, mas
+introduz desafios significativos: manter invariantes da aplicação sob
+consistência fraca, executar transações cujos objetos não estão todos
+replicados localmente e responder a consultas analíticas recorrentes
+que dependem de dados dispersos por vários centros de dados.
 
-Os resumos devem aparecer primeiro na língua do texto principal e depois na outra língua. Por exemplo, se a dissertação for redigida em português, o resumo em português aparecerá primeiro, seguido do resumo em inglês (\emph{abstract}), seguido do texto principal em português. Se a dissertação for redigida em inglês, o resumo em inglês (\emph{abstract} aparecerá primeiro, seguido do resumo em português, seguido do texto principal em inglês.
+Esta tese investiga como conceber uma base de dados geo-distribuída que
+suporte replicação parcial de forma eficiente, oferecendo simultaneamente
+garantias de correção úteis e uma interface rica e expressiva para as
+aplicações. Propomos a PotionDB, uma base de dados geo-distribuída cujas
+contribuições assentam em três pilares: (i) um algoritmo de replicação
+que combina replicação parcial, não-uniforme e geo-replicação, propagando
+para cada servidor apenas as operações relevantes para os dados que
+replica localmente; (ii) um algoritmo transacional que oferece consistência
+PSI+cset, com \emph{snapshot isolation} dentro de cada servidor e
+consistência causal entre servidores, suportando transações cujo estado
+pode não estar totalmente presente numa única réplica; e (iii) vistas
+materializadas mantidas incrementalmente através de operações sobre CRDTs,
+mantidas atomicamente consistentes com os objetos que sumarizam, capazes
+de resumir dados particionados por várias réplicas parciais. A PotionDB
+inclui ainda um algoritmo de reconstrução de versões antigas dos objetos
+baseado em registos de operações e efeitos, reduzindo o consumo de memória
+relativamente à manutenção do histórico completo de versões.
 
-Na versão \LaTeX\, o template NOVAthesis irá ordenar automaticamente os dois resumos tendo em consideração a língua do texto principal. É possível alterar este comportamento adicionando
-\begin{verbatim}
-    \abstractorder(<MAIN_LANG>):={<LANG_1>,...,<LANG_N>}
-\end{verbatim}
-\noindent à zona de customização no preâmbulo do documento, e.g.,
-\begin{verbatim}
-    \abstractorder(de):={de,en,it}
-\end{verbatim}
-
-Os resumos não devem ultrapassar uma página e, de forma genérica, devem responder às seguintes questões (é essencial adaptá-los às práticas habituais da sua área científica):
-
-\begin{enumerate}
-  \item Qual é o problema?
-  \item Porque é que é um problema interessante/desafiante?
-  \item Qual é a proposta de abordagem/solução?
-  \item Quais são as consequências/resultados da solução proposta?
-\end{enumerate}
-
-% E agora vamos fazer um teste com uma quebra de linha no hífen a ver se a \LaTeX\ duplica o hífen na linha seguinte se usarmos \verb+"-+… em vez de \verb+-+.
-%
-% zzzz zzz zzzz zzz zzzz zzz zzzz zzz zzzz zzz zzzz zzz zzzz zzz zzzz zzz zzzz comentar"-lhe zzz zzzz zzz zzzz
-%
-% Sim!  Funciona! :)
+O trabalho futuro foca-se em particionamento dinâmico, níveis de
+consistência por transação (incluindo invariantes sobre objetos e vistas),
+uma interface do tipo SQL e um algoritmo refinado de \emph{garbage
+collection}. O sistema proposto está implementado num protótipo
+funcional e é avaliado no Grid'5000 com recurso ao TPC-H, ao YCSB e a
+\emph{microbenchmarks}, demonstrando que consultas analíticas complexas
+sobre dados parcialmente replicados podem ser respondidas com latência
+comparável à de leituras simples de objetos, preservando a consistência
+entre as vistas e os objetos a que se referem.
 
 % Palavras-chave do resumo em Português
 \begin{keywords}
-Palavra-chave 1, Palavra-chave 2, Palavra-chave 3, Palavra-chave 4
+Bases de dados geo-distribuídas, Replicação parcial, Replicação
+não-uniforme, Vistas materializadas, CRDTs, Consistência causal,
+\emph{Snapshot isolation}, Transações, Invariantes
 \end{keywords}
-% to add an extra black line
